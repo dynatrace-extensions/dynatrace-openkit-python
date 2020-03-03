@@ -37,7 +37,7 @@ class HttpClient:
         self.logger = logger
         self.server_id = server_id
         self.monitor_url = self.build_monitor_url(base_url, application_id, server_id)
-        self.session_url = self.build_session_url()
+        self.new_session_url = self.build_session_url()
 
     def send_request(
         self, request_type: RequestType, url: str, client_ip_address: Optional[str], data: Optional[str], method: str
@@ -72,6 +72,14 @@ class HttpClient:
     def send_status_request(self, additional_params):
         url = self.append_additional_query_parameters(self.monitor_url, additional_params)
         return self.send_request(RequestType.STATUS, url, None, None, "GET")
+
+    def send_new_session_request(self, additional_params):
+        url = self.append_additional_query_parameters(self.new_session_url, additional_params)
+        return self.send_request(RequestType.NEW_SESSION, url, None, None, "GET")
+
+    def send_beacon_request(self, client_ip: str, data: str, additional_params):
+        url = self.append_additional_query_parameters(self.monitor_url, additional_params)
+        return self.send_request(RequestType.BEACON, url, client_ip, data, "POST")
 
     def append_additional_query_parameters(self, base_url: str, params):
         if params is None:
