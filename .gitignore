@@ -1,0 +1,6 @@
+__pycache__/
+.pytest_cache/
+build.sh
+upload.sh
+openkit/tests.py
+setup.py
