@@ -4,7 +4,7 @@ import sys
 
 sys.path.append("..")
 
-from openkit.api.beacon_cache import BeaconCache, BeaconCacheEvictor
+from core.caching.beacon_cache import BeaconCache, BeaconCacheEvictor
 
 logger = logging.getLogger(__name__)
 

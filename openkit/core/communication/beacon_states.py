@@ -42,7 +42,7 @@ def send_status_request(context: "BeaconSendingContext", num_retries: int, init_
 
 class AbstractBeaconSendingState(ABC):
     def __init__(self):
-        self.terminal_state = None
+        self.terminal = None
 
     def execute(self, context: "BeaconSendingContext"):
         try:
@@ -69,11 +69,17 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
         self.terminal = False
 
     def do_execute(self, context: "BeaconSendingContext"):
-        print("Running BeaconSendingCaptureOnState")
-        pass
+        context.sleep(1000)
+
+        new_sessions_response = self.send_new_session_requests(context)
+
 
     def get_shutdown_state(self):
         pass
+
+    def send_new_session_requests(self, context: BeaconSendingContext):
+
+        not_configured = [session for session in context.sessions if session.]
 
 
 class BeaconSendingCaptureOffState(AbstractBeaconSendingState):
@@ -89,15 +95,15 @@ class BeaconSendingCaptureOffState(AbstractBeaconSendingState):
 
 
 class BeaconSendingTerminalState(AbstractBeaconSendingState):
+    def __init__(self):
+        super().__init__()
+        self.terminal = True
+
     def do_execute(self, context: "BeaconSendingContext"):
         context.shutdown_requested = True
 
     def get_shutdown_state(self):
         return self
-
-    def __init__(self):
-        super().__init__()
-        self.terminal = True
 
 
 class BeaconSendingInitState(AbstractBeaconSendingState):

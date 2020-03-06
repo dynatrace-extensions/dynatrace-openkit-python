@@ -1,9 +1,11 @@
 import logging
 import time
-from threading import Thread, Event
-from typing import Optional
+from threading import Thread, Event, RLock
+from typing import Optional, List
 
 from core.communication.beacon_states import BeaconSendingInitState, AbstractBeaconSendingState
+from core.configuration.server_configuration import ServerConfiguration
+from core.session import SessionImpl
 
 from requests import Response
 
@@ -15,16 +17,46 @@ class BeaconSendingContext:
     def __init__(self, logger: logging.Logger, http_client: HttpClient):
         self.logger = logger
         self.http_client = http_client
-        self.terminal_state = False
+        self.server_configuration = ServerConfiguration()  # Default Values
+        self.last_response_attributes = None  # TODO: This is a class protocol.ResponseAttributes
+
+        self.sessions: List[SessionImpl] = []
+
         self.last_open_session_beacon_send_time = None
         self.last_status_check_time = None
         self.shutdown_requested = False
         self.init_succeded = False
-        self.last_response_attributes = None  # TODO: This is a class protocol.ResponseAttributes
 
         self.current_state: AbstractBeaconSendingState = BeaconSendingInitState()
         self.next_state = None
-        self.capture_on = True
+
+        self._lock = RLock()
+
+    @property
+    def terminal(self):
+        return self.current_state.terminal
+
+    @property
+    def server_id(self):
+        return self.http_client.server_id
+
+    @property
+    def capture_on(self) -> bool:
+        with self._lock:
+            return self.server_configuration.capture_enabled
+
+    @property
+    def last_server_configuration(self) -> ServerConfiguration:
+        with self._lock:
+            return self.server_configuration
+
+    def disable_capture(self):
+        with self._lock:
+            self.server_configuration.capture_enabled = False
+
+    def clear_all_session_data(self):
+        # TODO: Implement Session clear
+        pass
 
     def execute_current_state(self):
         self.next_state = None
@@ -48,17 +80,20 @@ class BeaconSendingContext:
     def get_configuration_timestamp(self):
         return 0
 
+    def add_session(self, session):
+        self.sessions.append(session)
+
 
 class BeaconSenderThread(Thread):
     def __init__(self, logger: logging.Logger, context: BeaconSendingContext):
-        Thread.__init__(self)
+        Thread.__init__(self, name="BeaconSenderThread")
         self.logger = logger
         self.shutdown_flag = Event()
         self.context = context
 
     def run(self):
         self.logger.debug("BeaconSenderThread - Running")
-        while not self.context.terminal_state:
+        while not self.context.terminal:
             self.context.execute_current_state()
             if self.shutdown_flag.is_set():
                 break
@@ -72,6 +107,10 @@ class BeaconSender:
         self.context = BeaconSendingContext(logger, http_client)
         self.thread: Optional[BeaconSenderThread] = None
 
+    @property
+    def server_id(self):
+        return self.context.server_id
+
     def initalize(self):
         self.thread = BeaconSenderThread(self.logger, self.context)
         self.thread.start()
@@ -79,3 +118,11 @@ class BeaconSender:
     def shutdown(self):
         if self.thread is not None:
             self.thread.shutdown_flag.set()
+
+    def add_session(self, session):
+        self.logger.debug(f"Adding session {session}")
+        self.context.add_session(session)
+
+    @property
+    def last_server_configuration(self):
+        return self.context.last_server_configuration

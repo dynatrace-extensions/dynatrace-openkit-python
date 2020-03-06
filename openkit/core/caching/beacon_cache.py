@@ -3,9 +3,9 @@ import functools
 import logging
 import sys
 from threading import RLock, Thread, Condition, Event
-
-
 from typing import Dict, List
+
+from core.caching.beacon_key import BeaconKey
 
 
 @functools.total_ordering
@@ -37,7 +37,7 @@ class BeaconCacheEntry:
 
 class BeaconCache:
     def __init__(self, logger: logging.Logger):
-        self._logger = logger
+        self.logger = logger
         self._lock = RLock()
         self.beacons: Dict[int, BeaconCacheEntry] = dict()
         self.cache_size = 0
@@ -60,15 +60,37 @@ class BeaconCache:
             for key, entry in self.beacons.items():
                 self.cache_size += entry.total_bytes
 
-    def add_action(self, key: int, timestamp: datetime, data: str):
-
+    def add_action(self, beacon_key: BeaconKey, timestamp: datetime, data: str):
+        self.logger.debug(
+            f"add_action(sn={beacon_key.beacon_id}, seq={beacon_key.beacon_seq_number}, timestamp={datetime}, data={data})"
+        )
         with self._lock:
+            key = hash(beacon_key)
             entry = self.beacons.get(key, BeaconCacheEntry())
 
             record = BeaconCacheRecord(timestamp, data)
 
             with entry.lock:
                 entry.actions.append(record)
+                entry.total_bytes += record.size()
+
+            self.beacons[key] = entry
+            self.cache_size += record.size()
+
+        self.on_date_added()
+
+    def add_event(self, beacon_key: BeaconKey, timestamp: datetime, data: str):
+        self.logger.debug(
+            f"add_event(sn={beacon_key.beacon_id}, seq={beacon_key.beacon_seq_number}, timestamp={datetime}, data={data})"
+        )
+        with self._lock:
+            key = hash(beacon_key)
+            entry = self.beacons.get(key, BeaconCacheEntry())
+
+            record = BeaconCacheRecord(timestamp, data)
+
+            with entry.lock:
+                entry.events.append(record)
                 entry.total_bytes += record.size()
 
             self.beacons[key] = entry
@@ -86,7 +108,7 @@ class BeaconCacheEvictor(Thread):
         beacon_cache_lower_memory: int,
         beacon_cache_upper_memory: int,
     ):
-        Thread.__init__(self)
+        Thread.__init__(self, name="BeaconCacheEvictor")
         self.logger = logger
         self.beacon_cache = beacon_cache
         self.beacon_cache_max_age = beacon_cache_max_age
