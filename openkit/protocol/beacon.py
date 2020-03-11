@@ -316,7 +316,7 @@ class Beacon:
             )
 
             self.logger.debug(f"CHUNK: {chunk}")
-            if chunk is None and not chunk:
+            if chunk is None or not chunk:
                 return
 
             encoded_chunk = b""

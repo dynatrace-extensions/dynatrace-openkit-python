@@ -91,6 +91,19 @@ class BeaconCacheEntry:
 
         self.total_bytes += num_bytes
 
+    def remove_data_marked_for_sending(self):
+
+        if not self.has_data_to_send():
+            return
+
+        marked_events = [record for record in self.events_being_sent if record.marked_for_sending]
+        for event in marked_events:
+            self.events_being_sent.remove(event)
+
+        marked_actions = [record for record in self.actions_being_sent if record.marked_for_sending]
+        for action in marked_actions:
+            self.events_being_sent.remove(action)
+
 
 class BeaconCache:
     def __init__(self, logger: logging.Logger):
@@ -172,8 +185,14 @@ class BeaconCache:
         return entry.get_chunk(chunk_prefix, max_size, delimiter)
 
     def remove_chunked_data(self, key):
-        # TODO: Implement remove chunked data
-        pass
+        key = hash(key)
+        with self._lock:
+            entry = self.beacons.get(key)
+
+        if entry is None:
+            return
+
+        entry.remove_data_marked_for_sending()
 
     def reset_chunked_data(self, key):
 
