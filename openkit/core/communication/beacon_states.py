@@ -1,6 +1,10 @@
 from abc import ABC, abstractmethod
 import time
 from typing import TYPE_CHECKING
+import traceback
+
+from core.configuration.server_configuration import ServerConfiguration
+from protocol.status_response import StatusResponse
 
 from requests import Response
 
@@ -49,6 +53,7 @@ class AbstractBeaconSendingState(ABC):
             self.do_execute(context)
         except Exception as e:
             print(f"Exception: {e}")
+            traceback.print_exc()
             context.shutdown_requested = True
 
         if context.shutdown_requested:
@@ -72,14 +77,49 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
         context.sleep(1000)
 
         new_sessions_response = self.send_new_session_requests(context)
+        if new_sessions_response is not None and new_sessions_response.status_code == 429:
+            context.next_state = BeaconSendingCaptureOffState()
+            return
 
+        finished_sessions_response = self.send_finished_sessions(context)
+        if finished_sessions_response is not None and finished_sessions_response.status_code == 429:
+            context.next_state = BeaconSendingCaptureOffState()
+            return
 
     def get_shutdown_state(self):
         pass
 
-    def send_new_session_requests(self, context: BeaconSendingContext):
+    def send_new_session_requests(self, context: "BeaconSendingContext"):
 
-        not_configured = [session for session in context.sessions if session.]
+        response = None
+        not_configured_sessions = [session for session in context.sessions if not session.configured]
+        context.logger.debug(f"Sending requests for {len(not_configured_sessions)} not configured sessions")
+
+        for session in not_configured_sessions:
+            response = context.http_client.send_new_session_request(context)
+
+            if response.status_code < 400:
+                status_response = StatusResponse(response)
+                updated_attributes = context.update_from(status_response)
+                new_server_config = ServerConfiguration.create_from(updated_attributes)
+                session.update_server_configuration(new_server_config)
+        return response
+
+    def send_finished_sessions(self, context: "BeaconSendingContext"):
+
+        response = None
+        finished_sessions = [session for session in context.sessions if session.configured and session.finished]
+        context.logger.debug(f"Sending requests for {len(finished_sessions)} finished sessions")
+
+        for session in finished_sessions:
+
+            if session.data_sending_allowed:
+                response = session.send_beacon(context.http_client, context)
+
+            context.sessions.remove(session)
+            session.remove_captured_data()
+
+        return response
 
 
 class BeaconSendingCaptureOffState(AbstractBeaconSendingState):

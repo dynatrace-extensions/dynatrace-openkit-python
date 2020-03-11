@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from core.configuration.beacon_configuration import BeaconConfiguration
     from core.session import SessionProxy
     from core.caching.beacon_cache import BeaconCache
+    from protocol.http_client import HttpClient
 
 
 class Beacon:
@@ -286,8 +287,77 @@ class Beacon:
         if self.configuration.server_configuration.capture_enabled:
             self.beacon_cache.add_action(self.beacon_key, timestamp, string)
 
+    @property
+    def current_timestamp(self):
+        return int(datetime.now().timestamp() * 1000)
+
     def time_since_session_started(self, timestamp: datetime):
         return (timestamp - self.session_start_time).total_seconds() * 1000
+
+    def update_server_configuration(self, server_configuration):
+        self.configuration.server_configuration = server_configuration
+        self.configuration.server_configured = True
+
+    def send(self, http_client: "HttpClient", additional_params):
+        while True:
+
+            string_parts = [
+                self.immutable_beacon_data,
+                self.append_mutable_beacon_data(),
+            ]
+
+            prefix = "".join(string_parts)
+
+            chunk = self.beacon_cache.get_next_beacon_chunk(
+                self.beacon_key,
+                prefix,
+                self.configuration.server_configuration.beacon_size_in_bytes - 1024,
+                Beacon.BEACON_DATA_DELIMITER,
+            )
+
+            self.logger.debug(f"CHUNK: {chunk}")
+            if chunk is None and not chunk:
+                return
+
+            encoded_chunk = b""
+            try:
+                encoded_chunk = chunk.encode("UTF-8")
+            except Exception as e:
+                self.logger.error(f"Could not decode beacon chunk: {e}")
+                self.beacon_cache.reset_chunked_data(self.beacon_key)
+                return
+
+            response = http_client.send_beacon_request(self.ip_address, encoded_chunk, additional_params)
+            if response is None or response.status_code > 400:
+                self.beacon_cache.reset_chunked_data(self.beacon_key)
+                break
+            else:
+                self.beacon_cache.remove_chunked_data(self.beacon_key)
+
+        return response
+
+    @property
+    def visit_store_version(self):
+        return self.configuration.server_configuration.visit_store_version
+
+    def append_mutable_beacon_data(self):
+        string_parts = [
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_VISIT_STORE_VERSION, self.visit_store_version),
+            Beacon.BEACON_DATA_DELIMITER,
+            self.create_timestamp_data(),
+            Beacon.BEACON_DATA_DELIMITER,
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_MULTIPLICITY, self.configuration.server_configuration.multiplicity),
+        ]
+
+        return "".join(string_parts)
+
+    def create_timestamp_data(self):
+        string_parts = [
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TRANSMISSION_TIME, self.current_timestamp),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_SESSION_START_TIME, int(self.session_start_time.timestamp() * 1000)),
+        ]
+
+        return "".join(string_parts)
 
     @staticmethod
     def build_basic_event_data(event_type: EventType, name: Optional[str]):

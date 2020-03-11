@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
+import functools
 import logging
 from threading import RLock
 from typing import TYPE_CHECKING, Optional
@@ -70,8 +71,8 @@ class NullSession(Session):
 class SessionImpl(OpenKitComposite, Session):
     def __init__(self, logger: logging.Logger, parent: OpenKitComposite, beacon: Beacon):
         super().__init__()
-        self.is_finishing = False
-        self.is_finished = False
+        self.finishing = False
+        self.finished = False
         self.was_tried_for_ending = False
         self.logger = logger
         self.parent = parent
@@ -93,14 +94,19 @@ class SessionImpl(OpenKitComposite, Session):
 
     @property
     def configured(self):
-        # TODO: Implement Server Configuration Set
-        # TODO: This comes from the StatusResponse I think
-        pass
+        return self.beacon.configuration.server_configured
+
+    @property
+    def data_sending_allowed(self):
+        return self.configured and self.beacon.configuration.server_configuration.capture_enabled
+
+    def send_beacon(self, http_client, additional_params):
+        return self.beacon.send(http_client, additional_params)
 
     def end(self, end_time: Optional[datetime] = None):
         self.logger.debug(f"Ending session {self}")
 
-        if self.is_finishing or self.is_finished:
+        if self.finishing or self.finished:
             return
 
         for child in self._children:
@@ -110,9 +116,18 @@ class SessionImpl(OpenKitComposite, Session):
                 self.logger.error(f"Could not close {child}: {e}")
 
         self.beacon.end_session(end_time)
-        self.is_finished = True
+        self.finished = True
         self.parent.on_child_closed(self)
         self.parent = None
+
+    def update_server_configuration(self, server_configuration):
+        self.beacon.update_server_configuration(server_configuration)
+
+    def remove_captured_data(self):
+        self.beacon.beacon_cache.delete_cache_entry(self.beacon.beacon_key)
+
+    def __eq__(self, other):
+        return self.beacon.beacon_key == other.beacon.beacon_key
 
 
 class SessionProxy(OpenKitComposite, Session):

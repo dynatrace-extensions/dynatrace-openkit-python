@@ -1,3 +1,6 @@
+from protocol.status_response import StatusResponse
+
+
 class ServerConfiguration:
     def __init__(
         self,
@@ -28,3 +31,21 @@ class ServerConfiguration:
         self.session_timeout_in_milliseconds = session_timeout_in_milliseconds
         self.session_split_by_idle_timeout_enabled = session_split_by_idle_timeout_enabled
         self.visit_store_version = visit_store_version
+
+    @staticmethod
+    def create_from(status_response: StatusResponse) -> "ServerConfiguration":
+        return ServerConfiguration(
+            status_response.capture,
+            status_response.capture_crashes,
+            status_response.capture_errors,
+            status_response.server_id,
+            status_response.max_beacon_size,
+            status_response.multiplicity,
+            status_response.max_session_duration,
+            status_response.max_session_duration is not None,
+            status_response.max_events_per_session,
+            status_response.max_events_per_session is not None,
+            status_response.session_timeout,
+            status_response.session_timeout is not None,
+            status_response.visit_store_version,
+        )

@@ -6,6 +6,7 @@ from typing import Optional, List
 from core.communication.beacon_states import BeaconSendingInitState, AbstractBeaconSendingState
 from core.configuration.server_configuration import ServerConfiguration
 from core.session import SessionImpl
+from protocol.status_response import StatusResponse
 
 from requests import Response
 
@@ -18,7 +19,7 @@ class BeaconSendingContext:
         self.logger = logger
         self.http_client = http_client
         self.server_configuration = ServerConfiguration()  # Default Values
-        self.last_response_attributes = None  # TODO: This is a class protocol.ResponseAttributes
+        self.last_response_attributes = StatusResponse(None)
 
         self.sessions: List[SessionImpl] = []
 
@@ -82,6 +83,12 @@ class BeaconSendingContext:
 
     def add_session(self, session):
         self.sessions.append(session)
+
+    def update_from(self, status_response: StatusResponse):
+        self.last_response_attributes = status_response
+        self.server_configuration = ServerConfiguration.create_from(status_response)
+        self.http_client.server_id = self.server_configuration.server_id
+        return self.last_response_attributes
 
 
 class BeaconSenderThread(Thread):
