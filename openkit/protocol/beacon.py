@@ -184,7 +184,7 @@ class Beacon:
             f"-{self.session_sequence_number}" if self.configuration.server_configuration.visit_store_version > 1 else "",
             f"_{quote(self.configuration.openkit_configuration.application_id)}",
             f"_{parent_action_id}",
-            f"_{get_ident()}",
+            f"_{get_ident() & 0xffffffff}",  # 32 bits
             f"_{tracer_seq_no}",
         ]
 
@@ -200,7 +200,7 @@ class Beacon:
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_ACTION_ID, action.id),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_PARENT_ACTION_ID, action.parent_action_id),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_START_SEQUENCE_NUMBER, action.start_seq_no),
-            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0, action.id),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0, self.time_since_session_started(action.start_time)),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_END_SEQUENCE_NUMBER, action.end_sequence_number),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_1, (action.end_time - action.start_time).total_seconds() * 1000),
         ]
@@ -292,7 +292,7 @@ class Beacon:
         return int(datetime.now().timestamp() * 1000)
 
     def time_since_session_started(self, timestamp: datetime):
-        return (timestamp - self.session_start_time).total_seconds() * 1000
+        return int((timestamp - self.session_start_time).total_seconds() * 1000)
 
     def update_server_configuration(self, server_configuration):
         self.logger.debug(f"Received new server configuration: {server_configuration}")
@@ -365,7 +365,7 @@ class Beacon:
         string_parts = [
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_EVENT_TYPE, str(event_type.value)),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_NAME, name.strip()) if name is not None else "",
-            Beacon.add_key_value_pair(Beacon.BEACON_KEY_THREAD_ID, str(get_ident())),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_THREAD_ID, str(get_ident() & 0xFFFFFFFF)),
         ]
 
         return "".join(string_parts)
