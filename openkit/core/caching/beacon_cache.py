@@ -211,9 +211,11 @@ class BeaconCache:
         self.on_date_added()
 
     def delete_cache_entry(self, key):
+        key = hash(key)
         self.logger.debug(f"Deleting cache entry {key}")
         with self._lock:
-            entry = self.beacons.pop(key)
+            entry = self.beacons.get(key)
+            del self.beacons[key]
 
         if entry is not None:
             self.cache_size += -1 * entry.total_bytes

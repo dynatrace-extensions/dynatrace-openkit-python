@@ -86,6 +86,8 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
             context.next_state = BeaconSendingCaptureOffState()
             return
 
+        # TODO - Implement send live sessions
+
     def get_shutdown_state(self):
         pass
 
