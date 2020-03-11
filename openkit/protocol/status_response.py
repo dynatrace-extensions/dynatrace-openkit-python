@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 class StatusResponse:
     def __init__(self, response: Optional["Response"]):
+        self.http_response = response
         self.max_beacon_size = 150 * 1024
         self.max_session_duration = 6 * 60 * 60 * 1000  # 6 hours
         self.max_events_per_session = 200

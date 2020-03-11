@@ -49,3 +49,6 @@ class ServerConfiguration:
             status_response.session_timeout is not None,
             status_response.visit_store_version,
         )
+
+    def __str__(self):
+        return str(self.__dict__)

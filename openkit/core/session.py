@@ -126,6 +126,9 @@ class SessionImpl(OpenKitComposite, Session):
     def remove_captured_data(self):
         self.beacon.beacon_cache.delete_cache_entry(self.beacon.beacon_key)
 
+    def clear_captured_data(self):
+        self.beacon.beacon_cache.delete_cache_entry(self.beacon.beacon_key)
+
     def __eq__(self, other):
         return self.beacon.beacon_key == other.beacon.beacon_key
 

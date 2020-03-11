@@ -295,6 +295,7 @@ class Beacon:
         return (timestamp - self.session_start_time).total_seconds() * 1000
 
     def update_server_configuration(self, server_configuration):
+        self.logger.debug(f"Received new server configuration: {server_configuration}")
         self.configuration.server_configuration = server_configuration
         self.configuration.server_configured = True
 
@@ -315,7 +316,6 @@ class Beacon:
                 Beacon.BEACON_DATA_DELIMITER,
             )
 
-            self.logger.debug(f"CHUNK: {chunk}")
             if chunk is None or not chunk:
                 return
 

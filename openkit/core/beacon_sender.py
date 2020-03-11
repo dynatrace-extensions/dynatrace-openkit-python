@@ -3,7 +3,7 @@ import time
 from threading import Thread, Event, RLock
 from typing import Optional, List
 
-from core.communication.beacon_states import BeaconSendingInitState, AbstractBeaconSendingState
+from core.communication import BeaconSendingInitState, AbstractBeaconSendingState
 from core.configuration.server_configuration import ServerConfiguration
 from core.session import SessionImpl
 from protocol.status_response import StatusResponse
@@ -56,8 +56,12 @@ class BeaconSendingContext:
             self.server_configuration.capture_enabled = False
 
     def clear_all_session_data(self):
-        # TODO: Implement Session clear
-        pass
+        self.logger.debug(f"Deleting all session data from cache")
+        sessions = [session for session in self.sessions]
+        for session in sessions:
+            session.clear_captured_data()
+            if session.finished:
+                self.sessions.remove(session)
 
     def execute_current_state(self):
         self.next_state = None
@@ -65,18 +69,22 @@ class BeaconSendingContext:
 
         if self.next_state is not None and self.next_state != self.current_state:
             self.logger.debug(f"State change from {self.current_state} to {self.next_state}")
-
-        self.current_state = self.next_state
+            self.current_state = self.next_state
 
     def sleep(self, millis):
         time.sleep(millis / 1000)
 
-    def handle_response(self, response: Response):
+    def handle_response(self, response: StatusResponse):
 
-        if response is None or response.status_code >= 400:
+        if response is None or response.http_response.status_code >= 400:
+            self.disable_capture()
+            self.clear_all_session_data()
             return
 
-        # TODO: Implement server response parsing
+        self.update_from(response)
+
+        if not self.capture_on:
+            self.clear_all_session_data()
 
     def get_configuration_timestamp(self):
         return 0
@@ -87,8 +95,18 @@ class BeaconSendingContext:
     def update_from(self, status_response: StatusResponse):
         self.last_response_attributes = status_response
         self.server_configuration = ServerConfiguration.create_from(status_response)
+        self.logger.debug(f"Received new server configuration: {self.server_configuration}")
         self.http_client.server_id = self.server_configuration.server_id
         return self.last_response_attributes
+
+    @staticmethod
+    def current_timestamp():
+        return int(time.time() * 1000)
+
+    @property
+    def send_interval(self):
+        with self._lock:
+            return self.last_response_attributes.send_interval
 
 
 class BeaconSenderThread(Thread):
