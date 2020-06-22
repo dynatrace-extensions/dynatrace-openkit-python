@@ -102,7 +102,7 @@ class BeaconCacheEntry:
 
         marked_actions = [record for record in self.actions_being_sent if record.marked_for_sending]
         for action in marked_actions:
-            self.events_being_sent.remove(action)
+            self.actions_being_sent.remove(action)
 
 
 class BeaconCache:

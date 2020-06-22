@@ -202,7 +202,7 @@ class Beacon:
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_START_SEQUENCE_NUMBER, action.start_seq_no),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0, self.time_since_session_started(action.start_time)),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_END_SEQUENCE_NUMBER, action.end_sequence_number),
-            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_1, (action.end_time - action.start_time).total_seconds() * 1000),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_1, int((action.end_time - action.start_time).total_seconds() * 1000)),
         ]
 
         self.add_action_data(action.start_time, "".join(string_data))
@@ -228,7 +228,7 @@ class Beacon:
     ):
         if not self.configuration.server_configuration.capture_enabled:
             return
-
+        
         type_to_event_type = {
             str: EventType.VALUE_STRING,
             int: EventType.VALUE_INT,
@@ -242,6 +242,42 @@ class Beacon:
         string_parts = [event_string, Beacon.add_key_value_pair(Beacon.BEACON_KEY_VALUE, value)]
 
         self.add_event_data(event_time, "".join(string_parts))
+
+    def report_event(
+        self, parent_action_id: int, event_name: str, timestamp: Optional[datetime] = None
+    ):
+        if not self.configuration.server_configuration.capture_enabled:
+            return
+
+        if timestamp is None:
+            timestamp = datetime.now()
+
+        string_parts = [
+            self.build_basic_event_data(EventType.NAMED_EVENT, event_name),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_PARENT_ACTION_ID, parent_action_id),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_START_SEQUENCE_NUMBER, self.next_sequence_number),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0, self.time_since_session_started(timestamp)),
+        ]
+
+        self.add_event_data(timestamp, "".join(string_parts))
+
+    def identify_user(
+        self, user_tag: str, timestamp: Optional[datetime] = None
+    ):
+        if not self.configuration.server_configuration.capture_enabled:
+            return
+
+        if timestamp is None:
+            timestamp = datetime.now()
+
+        string_parts = [
+            self.build_basic_event_data(EventType.IDENTIFY_USER, user_tag),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_PARENT_ACTION_ID, 0),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_START_SEQUENCE_NUMBER, self.next_sequence_number),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0, self.time_since_session_started(timestamp)),
+        ]
+
+        self.add_event_data(timestamp, "".join(string_parts))
 
     def report_error(
         self, parent_action_id: int, error_name: str, error_code: int, reason: str, timestamp: Optional[datetime] = None
@@ -271,7 +307,7 @@ class Beacon:
             event_time = datetime.now()
 
         string_data = [
-            Beacon.build_basic_event_data(event_type.value, None),
+            Beacon.build_basic_event_data(event_type, name),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_PARENT_ACTION_ID, parent_action_id),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_START_SEQUENCE_NUMBER, self.next_sequence_number),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0, self.time_since_session_started(event_time)),
