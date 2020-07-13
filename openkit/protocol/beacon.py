@@ -2,6 +2,7 @@ from datetime import datetime
 from threading import get_ident, RLock
 from typing import TYPE_CHECKING, Optional, Union
 from urllib.parse import quote
+from urllib.parse import quote_plus
 
 from core.caching.beacon_key import BeaconKey
 from core.action import Action, BaseActionImpl
@@ -322,6 +323,24 @@ class Beacon:
     def add_action_data(self, timestamp: datetime, string: str):
         if self.configuration.server_configuration.capture_enabled:
             self.beacon_cache.add_action(self.beacon_key, timestamp, string)
+
+    def add_web_request(self, parent_action_id, web_request_tracer):
+        string_parts = [
+            Beacon.build_basic_event_data(EventType.WEB_REQUEST, quote_plus(web_request_tracer.url)),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_PARENT_ACTION_ID, parent_action_id),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_START_SEQUENCE_NUMBER, web_request_tracer.start_sequence_no),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0, self.time_since_session_started(web_request_tracer.start_time)),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_END_SEQUENCE_NUMBER, web_request_tracer.end_sequence_no),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_1, self.time_since_session_started(web_request_tracer.end_time)),
+        ]
+        if hasattr(web_request_tracer, "response_code"):
+            string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_RESPONSECODE, web_request_tracer.response_code))
+        if hasattr(web_request_tracer, "bytes_received"):
+            string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_BYTES_RECEIVED, web_request_tracer.bytes_received))
+        if hasattr(web_request_tracer, "bytes_sent"):
+            string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_BYTES_RECEIVED, web_request_tracer.bytes_sent))
+
+        self.add_event_data(self.session_start_time, "".join(string_parts))
 
     @property
     def current_timestamp(self):
