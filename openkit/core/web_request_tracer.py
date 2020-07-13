@@ -23,3 +23,6 @@ class WebRequestTracer:
             self.end_time = datetime.now()
             self.end_sequence_no = self.beacon.next_sequence_number
             self.beacon.add_web_request(self.parent_action_id, self)
+    
+    def close(self):
+        self.stop(self.response_code)

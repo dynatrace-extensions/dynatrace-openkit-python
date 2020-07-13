@@ -78,7 +78,12 @@ class BaseActionImpl(Action):
         self.beacon.report_error(self.id, error_name, error_code, reason)
 
     def trace_web_request(self, url: str):
-        pass
+        from core.web_request_tracer import WebRequestTracer
+        tracer = WebRequestTracer(
+            parent=self, url=url, beacon=self.beacon)
+        return tracer
 
     def leave_action(self) -> "Action":
-        pass
+        self.end_time: datetime = datetime.now()
+        self.end_sequence_no = self.beacon.next_sequence_number
+        self.beacon.add_action(self)

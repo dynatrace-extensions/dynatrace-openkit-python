@@ -2,7 +2,6 @@ import time
 import requests
 import logging
 from api.openkit import Openkit
-from core.web_request_tracer import WebRequestTracer
 
 
 logging.basicConfig(level=logging.DEBUG,
@@ -11,8 +10,7 @@ logging.basicConfig(level=logging.DEBUG,
 
 
 def execute_and_trace_request(action, endpoint):
-    tracer = WebRequestTracer(
-        parent=root_action, url=endpoint, beacon=action.beacon)
+    tracer = action.trace_web_request(endpoint)
     tracer.start()
 
     rsp = requests.get(tracer.url)
@@ -43,6 +41,8 @@ root_action.report_value("sleepTime", 2000)
 time.sleep(0.1)
 
 root_action.report_event("Finished sleeping")
+
+root_action.leave_action()
 
 input("Press ENTER to continue")
 
