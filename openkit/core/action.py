@@ -55,7 +55,7 @@ class BaseActionImpl(Action):
             self.logger("report_event: event_name must not be null or empty")
             return
 
-        self.logger.debug("report_event(" + event_name + ")")
+        self.logger.debug(f"report_event({event_name})")
 
         self.beacon.report_event(self.id, event_name)
 
@@ -87,3 +87,8 @@ class BaseActionImpl(Action):
         self.end_time: datetime = datetime.now()
         self.end_sequence_no = self.beacon.next_sequence_number
         self.beacon.add_action(self)
+
+        if hasattr(self.parent, "id"):
+            return self.parent.id
+        else:
+            return None
