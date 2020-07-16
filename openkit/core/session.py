@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Optional
 
 from protocol.beacon import Beacon
 from core.configuration.beacon_configuration import BeaconConfiguration
+from core.action import BaseActionImpl
 
 
 if TYPE_CHECKING:
@@ -80,8 +81,9 @@ class SessionImpl(OpenKitComposite, Session):
 
         self.beacon.start_session()
 
-    def enter_action(self):
-        pass
+    def enter_action(self, name: str):
+        action = BaseActionImpl(logger=self.logger, name=name, parent=None, beacon=self.beacon)
+        self.beacon.add_action(action)
 
     def identify_user(self, name: str):
         pass
@@ -188,11 +190,14 @@ class SessionProxy(OpenKitComposite, Session):
 
         return session
 
-    def enter_action(self):
-        pass
+    def enter_action(self, name: str):
+        action = BaseActionImpl(logger=self.logger, name=name, parent=self.parent, beacon=self.current_session.beacon)
+
+        self.current_session.beacon.add_action(action)
+        return action
 
     def identify_user(self, name: str):
-        pass
+        self.current_session.beacon.identify_user(name)
 
     def report_crash(self, error_name, reson: str, stacktrace: str):
         pass
