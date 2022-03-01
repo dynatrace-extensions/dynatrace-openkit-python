@@ -379,3 +379,6 @@ class Beacon:
     def append_key(key: str):
         string_parts = ["&", key, "="]
         return "".join(string_parts)
+
+    def create_id(self):
+        return self.next_id

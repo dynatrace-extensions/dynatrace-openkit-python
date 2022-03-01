@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Optional
 
 from protocol.beacon import Beacon
 from core.configuration.beacon_configuration import BeaconConfiguration
+from core.action import NullRootAction, RootAction, BaseActionImpl, Action
 
 
 if TYPE_CHECKING:
@@ -16,7 +17,7 @@ if TYPE_CHECKING:
 
 
 class OpenKitComposite(ABC):
-    DEFAULT_ACTION_ID = 0
+    _DEFAULT_ACTION_ID = 0
 
     def __init__(self):
         self._children = []
@@ -25,13 +26,13 @@ class OpenKitComposite(ABC):
         self._children.append(child)
 
     @property
-    def action_id(self):
-        return self.DEFAULT_ACTION_ID
+    def _action_id(self):
+        return self._DEFAULT_ACTION_ID
 
 
 class Session(ABC):
     @abstractmethod
-    def enter_action(self):
+    def enter_action(self, name: str):
         pass
 
     @abstractmethod
@@ -52,7 +53,7 @@ class Session(ABC):
 
 
 class NullSession(Session):
-    def enter_action(self):
+    def enter_action(self, name: str):
         pass
 
     def identify_user(self, name: str):
@@ -78,10 +79,21 @@ class SessionImpl(OpenKitComposite, Session):
         self.parent = parent
         self.beacon = beacon
 
+        self.children = []
+
+        self._lock = RLock()
+
         self.beacon.start_session()
 
-    def enter_action(self):
-        pass
+    def enter_action(self, name: str):
+        self.logger.debug(f"SessionImpl - enter action' {name}'")
+        with self._lock:
+            if not (self.finished or self.finishing):
+                root_action = RootAction(self.logger, self, name, self.beacon)
+                self._store_child_in_list(root_action)
+                return root_action
+
+        return NullRootAction()
 
     def identify_user(self, name: str):
         pass
@@ -117,7 +129,7 @@ class SessionImpl(OpenKitComposite, Session):
 
         self.beacon.end_session(end_time)
         self.finished = True
-        self.parent.on_child_closed(self)
+        self.parent._on_child_closed(self)
         self.parent = None
 
     def update_server_configuration(self, server_configuration):
@@ -188,8 +200,23 @@ class SessionProxy(OpenKitComposite, Session):
 
         return session
 
-    def enter_action(self):
-        pass
+    def enter_action(self, name: str) -> Action:
+        self.logger.debug(f"enter_action({name})")
+        with self._lock:
+            if not self.is_finished:
+                # TODO: getOrSplitCurrentSessionByEvents
+                session = self.current_session
+                self.record_top_action_event()
+                return session.enter_action(name)
+
+        return NullRootAction()
+
+    def record_top_action_event(self):
+        self.top_level_action_count += 1
+        self.record_top_level_event_interaction()
+
+    def record_top_level_event_interaction(self):
+        self.last_interaction_time = int(datetime.now().timestamp() * 1000)
 
     def identify_user(self, name: str):
         pass
@@ -216,7 +243,7 @@ class SessionProxy(OpenKitComposite, Session):
             except Exception as e:
                 self.logger.error(f"Could not close {child}: {e}")
 
-        self.parent.on_child_closed(self)
+        self.parent._on_child_closed(self)
 
     def on_child_closed(self, child):
         with self._lock:

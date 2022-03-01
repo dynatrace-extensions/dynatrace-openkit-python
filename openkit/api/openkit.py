@@ -109,7 +109,7 @@ class Openkit(OpenKitComposite):
 
         return NullSession()
 
-    def on_child_closed(self, child):
+    def _on_child_closed(self, child):
         with self._lock:
             self._children.remove(child)
 
