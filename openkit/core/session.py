@@ -219,7 +219,7 @@ class SessionProxy(OpenKitComposite, Session):
         self.last_interaction_time = int(datetime.now().timestamp() * 1000)
 
     def identify_user(self, name: str):
-        pass
+        self.current_session.beacon.identify_user(name)
 
     def report_crash(self, error_name, reson: str, stacktrace: str):
         pass
