@@ -2,12 +2,13 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Optional
 
+from .composite import OpenKitComposite
 from .openkit_object import OpenKitObject
 from .root_action import RootAction
 from .web_request_tracer import WebRequestTracer
 
 
-class Session(ABC, OpenKitObject):
+class Session(ABC, OpenKitObject, OpenKitComposite):
     @abstractmethod
     def enter_action(self, name: str, timestamp: Optional[datetime] = None) -> RootAction:
         pass

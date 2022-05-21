@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import List
 
-from ...api.openkit_object import OpenKitObject
+from .openkit_object import OpenKitObject
 
 
 class OpenKitComposite:

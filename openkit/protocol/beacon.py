@@ -1,29 +1,27 @@
 from datetime import datetime
-from threading import get_ident, RLock
-from typing import TYPE_CHECKING, Optional, Union
+from threading import RLock, get_ident
+from typing import Optional, TYPE_CHECKING, Union
 from urllib.parse import quote
 from urllib.parse import quote_plus
 
 from ..core.caching.key import BeaconKey
+from ..core.configuration.server_configuration import ServerConfigurationUpdateCallback
 from ..protocol.event_type import EventType
-from ..protocol.http_client import (
-    OPENKIT_VERSION,
-    PROTOCOL_VERSION,
-    PLATFORM_TYPE_OPENKIT,
-    AGENT_TECHNOLOGY_TYPE,
-    ERROR_TECHNOLOGY_TYPE,
-)
+from ..protocol.http_client import (AGENT_TECHNOLOGY_TYPE,
+                                    ERROR_TECHNOLOGY_TYPE,
+                                    OPENKIT_VERSION,
+                                    PLATFORM_TYPE_OPENKIT,
+                                    PROTOCOL_VERSION)
 
 if TYPE_CHECKING:
     from ..core.configuration.beacon_configuration import BeaconConfiguration
-    from ..core.objects.session import SessionProxy
     from ..core.objects.base_action import BaseAction
     from ..core.caching.cache import BeaconCache
     from ..protocol.http_client import HttpClient
+    from ..core.objects.session_creator import SessionCreator
 
 
 class Beacon:
-
     # basic data constants
     BEACON_KEY_PROTOCOL_VERSION = "vv"
     BEACON_KEY_OPENKIT_VERSION = "va"
@@ -82,11 +80,11 @@ class Beacon:
     next_session_id = 0
 
     def __init__(
-        self,
-        beacon_initializer: "SessionProxy",
-        beacon_configuration: "BeaconConfiguration",
-        device_id=None,
-        session_start_time=None,
+            self,
+            beacon_initializer: "SessionCreator",
+            beacon_configuration: "BeaconConfiguration",
+            device_id = None,
+            session_start_time = None,
     ):
         self.logger = beacon_initializer.logger
         self.beacon_cache: BeaconCache = beacon_initializer.beacon_cache
@@ -100,7 +98,7 @@ class Beacon:
 
         # This allows user to set a DeviceID per session
         if device_id is None:
-            device_id = self.configuration.openkit_configuration.deviceID
+            device_id = self.configuration.openkit_config.deviceID
         self.device_id = device_id
 
         ip_address = beacon_initializer.ip_address
@@ -133,7 +131,7 @@ class Beacon:
         return self.next_session_id
 
     def create_immutable_beacon_data(self) -> str:
-        openkit_config = self.configuration.openkit_configuration
+        openkit_config = self.configuration.openkit_config
 
         string_parts = [
             # version and application information
@@ -183,7 +181,7 @@ class Beacon:
             f"_{self.device_id}",
             f"_{self.session_number}",
             f"-{self.session_sequence_number}" if self.configuration.server_configuration.visit_store_version > 1 else "",
-            f"_{quote(self.configuration.openkit_configuration.application_id)}",
+            f"_{quote(self.configuration.openkit_config.application_id)}",
             f"_{parent_action_id}",
             f"_{get_ident() & 0xffffffff}",  # 32 bits
             f"_{tracer_seq_no}",
@@ -203,7 +201,8 @@ class Beacon:
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_START_SEQUENCE_NUMBER, action.start_sequence_number),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0, self.time_since_session_started(action.start_time)),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_END_SEQUENCE_NUMBER, action.end_sequence_number),
-            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_1, int((action.end_time - action.start_time).total_seconds() * 1000)),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_1,
+                                      int((action.end_time - action.start_time).total_seconds() * 1000)),
         ]
 
         self.add_action_data(action.start_time, "".join(string_data))
@@ -224,7 +223,11 @@ class Beacon:
 
         self.add_event_data(end_time, "".join(string_parts))
 
-    def report_value(self, parent_action_id, value_name: str, value: Union[str, int, float], timestamp: Optional[datetime] = None):
+    def report_value(self,
+                     parent_action_id,
+                     value_name: str,
+                     value: Union[str, int, float],
+                     timestamp: Optional[datetime] = None):
         if not self.configuration.server_configuration.capture_enabled:
             return
 
@@ -274,7 +277,12 @@ class Beacon:
 
         self.add_event_data(timestamp, "".join(string_parts))
 
-    def report_error(self, parent_action_id: int, error_name: str, error_code: int, reason: str, timestamp: Optional[datetime] = None):
+    def report_error(self,
+                     parent_action_id: int,
+                     error_name: str,
+                     error_code: int,
+                     reason: str,
+                     timestamp: Optional[datetime] = None):
         if not self.configuration.server_configuration.capture_enabled:
             return
 
@@ -293,7 +301,11 @@ class Beacon:
 
         self.add_event_data(timestamp, "".join(string_parts))
 
-    def build_event(self, event_type: EventType, name: str, parent_action_id: int, event_time: Optional[datetime] = None) -> (datetime, str):
+    def build_event(self,
+                    event_type: EventType,
+                    name: str,
+                    parent_action_id: int,
+                    event_time: Optional[datetime] = None) -> (datetime, str):
         if event_time is None:
             event_time = datetime.now()
 
@@ -314,21 +326,26 @@ class Beacon:
         if self.configuration.server_configuration.capture_enabled:
             self.beacon_cache.add_action(self.beacon_key, timestamp, string)
 
-    def add_web_request(self, parent_action_id, web_request_tracer):
+    def add_web_request(self, parent_action_id: int, web_request_tracer):
         string_parts = [
             Beacon.build_basic_event_data(EventType.WEB_REQUEST, quote_plus(web_request_tracer.url)),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_PARENT_ACTION_ID, parent_action_id),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_START_SEQUENCE_NUMBER, web_request_tracer.start_sequence_no),
-            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0, self.time_since_session_started(web_request_tracer.start_time)),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0,
+                                      self.time_since_session_started(web_request_tracer.start_time)),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_END_SEQUENCE_NUMBER, web_request_tracer.end_sequence_no),
-            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_1, self.time_since_session_started(web_request_tracer.end_time)),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_1,
+                                      self.time_since_session_started(web_request_tracer.end_time)),
         ]
         if hasattr(web_request_tracer, "response_code"):
-            string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_RESPONSECODE, web_request_tracer.response_code))
+            string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_RESPONSECODE,
+                                                          web_request_tracer.response_code))
         if hasattr(web_request_tracer, "bytes_received"):
-            string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_BYTES_RECEIVED, web_request_tracer.bytes_received))
+            string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_BYTES_RECEIVED,
+                                                          web_request_tracer.bytes_received))
         if hasattr(web_request_tracer, "bytes_sent"):
-            string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_BYTES_RECEIVED, web_request_tracer.bytes_sent))
+            string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_BYTES_RECEIVED,
+                                                          web_request_tracer.bytes_sent))
 
         self.add_event_data(self.session_start_time, "".join(string_parts))
 
@@ -391,7 +408,8 @@ class Beacon:
             Beacon.BEACON_DATA_DELIMITER,
             self.create_timestamp_data(),
             Beacon.BEACON_DATA_DELIMITER,
-            Beacon.add_key_value_pair(Beacon.BEACON_KEY_MULTIPLICITY, self.configuration.server_configuration.multiplicity),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_MULTIPLICITY,
+                                      self.configuration.server_configuration.multiplicity),
         ]
 
         return "".join(string_parts)
@@ -399,7 +417,8 @@ class Beacon:
     def create_timestamp_data(self):
         string_parts = [
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_TRANSMISSION_TIME, self.current_timestamp),
-            Beacon.add_key_value_pair(Beacon.BEACON_KEY_SESSION_START_TIME, int(self.session_start_time.timestamp() * 1000)),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_SESSION_START_TIME,
+                                      int(self.session_start_time.timestamp() * 1000)),
         ]
 
         return "".join(string_parts)
@@ -428,4 +447,13 @@ class Beacon:
     def create_id(self):
         return self.next_id
 
+    def set_server_config_update_callback(self, callback: ServerConfigurationUpdateCallback):
+        self.configuration.server_config_update_callback = callback
+
+    def initialize_server_config(self, initial_config):
+        pass
+
+    def update_server_config(self, updated_config):
+        pass
+    
 # TODO - BizEvent

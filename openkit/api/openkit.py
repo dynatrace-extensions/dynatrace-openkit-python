@@ -2,6 +2,7 @@ import logging
 from threading import RLock
 from typing import List, Optional
 
+from .composite import OpenKitComposite
 from .constants import DEFAULT_APPLICATION_VERSION, \
     DEFAULT_CRASH_REPORTING_LEVEL, \
     DEFAULT_DATA_COLLECTION_LEVEL, \
@@ -15,7 +16,7 @@ from .session import Session
 from ..core.beacon_sender import BeaconSender
 from ..core.caching import BeaconCache, BeaconCacheEvictor
 from ..core.configuration import OpenkitConfiguration
-from ..core.objects.composite import OpenKitComposite
+from ..core.objects.session_proxy import SessionProxy
 from ..protocol.http_client import DEFAULT_SERVER_ID, HttpClient
 
 

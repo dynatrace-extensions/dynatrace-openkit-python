@@ -1,11 +1,12 @@
 import logging
 from datetime import datetime
 from threading import RLock
-from typing import Union, Optional
+from typing import Optional, Union
 
-from .composite import OpenKitComposite
-from .web_request_tracer import WebRequestTracer
+from .null_web_request_tracer import NullWebRequestTracer
+from .web_request_tracer import WebRequestTracer, WebRequestTracerImpl
 from ...api.action import Action
+from ...api.composite import OpenKitComposite
 from ...api.openkit_object import CancelableOpenKitObject, OpenKitObject
 from ...protocol.beacon import Beacon
 
@@ -13,7 +14,7 @@ from ...protocol.beacon import Beacon
 class BaseAction(OpenKitComposite, CancelableOpenKitObject, Action):
 
     def __init__(self, logger: logging.Logger, parent: OpenKitComposite, name: str, beacon: Beacon,
-                 start_time: Optional[datetime] = None):
+                 timestamp: Optional[datetime] = None):
         super().__init__()
         self.logger: logging.Logger = logger
         self.parent: OpenKitComposite = parent
@@ -23,9 +24,9 @@ class BaseAction(OpenKitComposite, CancelableOpenKitObject, Action):
         self.end_sequence_number: int = -1
         self.name: str = name
 
-        if start_time is None:
-            start_time = beacon.current_timestamp
-        self.start_time: datetime = start_time
+        if timestamp is None:
+            timestamp = beacon.current_timestamp
+        self.start_time: datetime = timestamp
         self.end_time: Optional[datetime] = None
 
         self.start_sequence_number: int = beacon.next_sequence_number
@@ -54,7 +55,10 @@ class BaseAction(OpenKitComposite, CancelableOpenKitObject, Action):
             if not self.was_left:
                 self.beacon.report_event(self.id, event_name, timestamp)
 
-    def report_value(self, value_name: str, value: Union[str, int, float], timestamp: Optional[datetime] = None) -> "Action":
+    def report_value(self,
+                     value_name: str,
+                     value: Union[str, int, float],
+                     timestamp: Optional[datetime] = None) -> "Action":
         if not value_name:
             self.logger.warning(f"value_name must not be empty")
             return self
@@ -64,7 +68,11 @@ class BaseAction(OpenKitComposite, CancelableOpenKitObject, Action):
             if not self.was_left:
                 self.beacon.report_value(self.id, value_name, value, timestamp)
 
-    def report_error(self, error_name: str, error_code: int, reason: str, timestamp: Optional[datetime] = None) -> "Action":
+    def report_error(self,
+                     error_name: str,
+                     error_code: int,
+                     reason: str,
+                     timestamp: Optional[datetime] = None) -> "Action":
         if not error_name:
             self.logger.warning(f"error_name must not be empty")
             return self
@@ -75,7 +83,18 @@ class BaseAction(OpenKitComposite, CancelableOpenKitObject, Action):
                 self.beacon.report_error(self.id, error_name, error_code, reason, timestamp)
 
     def trace_web_request(self, url: str, timestamp: Optional[datetime] = None) -> WebRequestTracer:
-        raise NotImplementedError("trace_web_request is not implemented")
+        if not url:
+            self.logger.warning(f"url must not be empty")
+            return NullWebRequestTracer()
+
+        self.logger.debug(f"trace_web_request({url})")
+        with self.lock:
+            if not self.was_left:
+                web_request_tracer = WebRequestTracerImpl(self.logger, self, url, self.beacon, timestamp)
+                self._store_child_in_list(web_request_tracer)
+                return web_request_tracer
+
+        return NullWebRequestTracer()
 
     def leave_action(self, timestamp: Optional[datetime] = None) -> Optional["Action"]:
         self.logger.debug(f"leave_action({self.name})")

@@ -3,7 +3,11 @@ from datetime import datetime
 from threading import RLock
 from typing import Optional
 
-from .composite import OpenKitComposite
+from .null_root_action import NullRootAction
+from .null_web_request_tracer import NullWebRequestTracer
+from .root_action import RootActionImpl
+from .web_request_tracer import WebRequestTracerImpl
+from ...api.composite import OpenKitComposite
 from ...api.openkit_object import OpenKitObject
 from ...api.root_action import RootAction
 from ...api.session import Session
@@ -15,29 +19,60 @@ class SessionImpl(Session, OpenKitComposite):
 
     def __init__(self, logger: logging.Logger, parent: OpenKitComposite, beacon: Beacon):
         super().__init__()
-        self._state = SessionState(self)
-        self._logger = logger
-        self._parent = parent
-        self._beacon = beacon
+        self.state = SessionState(self)
+        self.logger = logger
+        self.parent = parent
+        self.beacon = beacon
 
-        self._beacon.start_session()
+        self.beacon.start_session()
 
     def enter_action(self, name: str, timestamp: Optional[datetime] = None) -> RootAction:
-        raise NotImplementedError
+        if not name:
+            self.logger.warning("action name must not be empty")
+            return NullRootAction()
+
+        self.logger.debug(f"enter_action({name})")
+
+        if not self.state.is_finishing_or_finished:
+            action = RootActionImpl(self.logger, self, name, self.beacon, timestamp)
+            self._store_child_in_list(action)
+            return action
+
+        return NullRootAction()
 
     def identify_user(self, name: str, timestamp: Optional[datetime] = None) -> None:
-        raise NotImplementedError
+        self.logger.debug(f"identify_user({name})")
+        if not self.state.is_finishing_or_finished:
+            self.beacon.identify_user(name, timestamp)
 
     def report_crash(self, error_name, reason: str, stacktrace: str, timestamp: Optional[datetime] = None) -> None:
-        raise NotImplementedError
+        if not error_name:
+            self.logger.warning("error name must not be empty")
+            return
+
+        self.logger.debug(f"report_crash({error_name}, {reason}, {stacktrace})")
+        if not self.state.is_finishing_or_finished:
+            # .beacon.report_crash(error_name, reason, stacktrace, timestamp)
+            # TODO - beacon.report_crash
+            raise NotImplementedError
 
     def trace_web_request(self, url: str, timestamp: Optional[datetime] = None) -> WebRequestTracer:
-        raise NotImplementedError
+        if not url:
+            self.logger.warning("url must not be empty")
+            return NullWebRequestTracer()
+
+        self.logger.debug(f"trace_web_request({url})")
+        if not self.state.is_finishing_or_finished:
+            tracer = WebRequestTracerImpl(self.logger, self, url, self.beacon, timestamp)
+            self._store_child_in_list(tracer)
+            return tracer
+
+        return NullWebRequestTracer()
 
     def end(self, send_end_event: bool = True, timestamp: Optional[datetime] = None):
-        self._logger.debug("end()")
+        self.logger.debug("end()")
 
-        if not self._state.mark_as_finishing():
+        if not self.state.mark_as_finishing():
             return
 
         children = self._copy_children()
@@ -45,19 +80,41 @@ class SessionImpl(Session, OpenKitComposite):
             child.close()
 
         if send_end_event:
-            self._beacon.end_session()
+            self.beacon.end_session()
 
-        self._state.mark_as_finished()
-        self._parent._on_child_closed(self)
-        self._parent = None
+        self.state.mark_as_finished()
+        self.parent._on_child_closed(self)
+        self.parent = None
+
+    def try_end(self) -> bool:
+        if self.state.is_finishing_or_finished:
+            return True
+
+        if self._child_count == 0:
+            self.end(send_end_event=False)
+            return True
+
+        self.state.mark_was_tried_for_ending()
+        return False
 
     # TODO - try_end for watchdog
+    # TODO - Send Biz event
+    # TODO - Other beacon and config methods
 
     def close(self):
         self.end()
 
     def _on_child_closed(self, child: OpenKitObject):
-        raise NotImplementedError
+        self._remove_child_from_list(child)
+
+        if self.state.was_tried_for_ending and self._child_count == 0:
+            self.end(False)
+
+    def initialize_server_config(self, initial_config):
+        self.beacon.initialize_server_config(initial_config)
+
+    def update_server_config(self, updated_config):
+        self.beacon.update_server_config(updated_config)
 
 
 class SessionState:
