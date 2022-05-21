@@ -1,38 +1,25 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
-import functools
 import logging
 from threading import RLock
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, List
 
-from protocol.beacon import Beacon
-from core.configuration.beacon_configuration import BeaconConfiguration
-from core.action import NullRootAction, RootAction, BaseActionImpl, Action
+from .action import RootAction
+from .composite import OpenKitComposite
+from ..protocol.beacon import Beacon
+from ..core.configuration.beacon_configuration import BeaconConfiguration
+from ..core.action import NullRootAction, RootActionImpl, ActionImpl, Action
 
 
 if TYPE_CHECKING:
-    from core.beacon_sender import BeaconSender
-    from core.configuration.server_configuration import ServerConfiguration
-    from api.openkit import Openkit
-
-
-class OpenKitComposite(ABC):
-    _DEFAULT_ACTION_ID = 0
-
-    def __init__(self):
-        self._children = []
-
-    def _store_child_in_list(self, child):
-        self._children.append(child)
-
-    @property
-    def _action_id(self):
-        return self._DEFAULT_ACTION_ID
+    from ..core.beacon_sender import BeaconSender
+    from ..core.configuration import ServerConfiguration
+    from .. import Openkit
 
 
 class Session(ABC):
     @abstractmethod
-    def enter_action(self, name: str):
+    def enter_action(self, name: str, timestamp: Optional[datetime] = None) -> RootAction:
         pass
 
     @abstractmethod
@@ -53,7 +40,7 @@ class Session(ABC):
 
 
 class NullSession(Session):
-    def enter_action(self, name: str):
+    def enter_action(self, name: str, timestamp: Optional[datetime] = None) -> RootAction:
         pass
 
     def identify_user(self, name: str):
@@ -85,11 +72,11 @@ class SessionImpl(OpenKitComposite, Session):
 
         self.beacon.start_session()
 
-    def enter_action(self, name: str):
-        self.logger.debug(f"SessionImpl - enter action' {name}'")
+    def enter_action(self, name: str, timestamp: Optional[datetime]) -> RootAction:
+        self.logger.debug(f"SessionImpl.enter_action({name})")
         with self._lock:
             if not (self.finished or self.finishing):
-                root_action = RootAction(self.logger, self, name, self.beacon)
+                root_action = RootActionImpl(self.logger, self, name, self.beacon, timestamp)
                 self._store_child_in_list(root_action)
                 return root_action
 
@@ -123,9 +110,9 @@ class SessionImpl(OpenKitComposite, Session):
 
         for child in self._children:
             try:
-                child.end(end_time)
+                child.close(end_time)
             except Exception as e:
-                self.logger.error(f"Could not close {child}: {e}")
+                self.logger.exception(f"Could not close {child}: {e}")
 
         self.beacon.end_session(end_time)
         self.finished = True
@@ -200,14 +187,14 @@ class SessionProxy(OpenKitComposite, Session):
 
         return session
 
-    def enter_action(self, name: str) -> Action:
-        self.logger.debug(f"enter_action({name})")
+    def enter_action(self, name: str, timestamp: Optional[datetime] = None) -> RootAction:
+        self.logger.debug(f"SessionProxy.enter_action({name})")
         with self._lock:
             if not self.is_finished:
                 # TODO: getOrSplitCurrentSessionByEvents
                 session = self.current_session
                 self.record_top_action_event()
-                return session.enter_action(name)
+                return session.enter_action(name, timestamp)
 
         return NullRootAction()
 
@@ -237,11 +224,12 @@ class SessionProxy(OpenKitComposite, Session):
                 return
             self.is_finished = True
 
+        self._children: List[SessionImpl]
         for child in self._children:
             try:
                 child.end(end_time)
             except Exception as e:
-                self.logger.error(f"Could not close {child}: {e}")
+                self.logger.exception(f"Could not close {child}: {e}")
 
         self.parent._on_child_closed(self)
 

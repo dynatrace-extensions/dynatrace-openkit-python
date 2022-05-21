@@ -5,7 +5,7 @@ import sys
 from threading import RLock, Thread, Condition, Event
 from typing import Dict, List
 
-from core.caching.beacon_key import BeaconKey
+from .beacon_key import BeaconKey
 
 
 @functools.total_ordering

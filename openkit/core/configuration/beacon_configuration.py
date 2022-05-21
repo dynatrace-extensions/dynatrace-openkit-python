@@ -1,16 +1,20 @@
 from threading import RLock
 import typing
 
-from core.configuration.server_configuration import ServerConfiguration
+from openkit.core.configuration.server_configuration import ServerConfiguration
 
 
 if typing.TYPE_CHECKING:
-    from core.configuration.openkit_configuration import OpenkitConfiguration
+    from openkit.core.configuration.openkit_configuration import OpenkitConfiguration
 
 
 class BeaconConfiguration:
     def __init__(
-        self, openkit_configuration: "OpenkitConfiguration", server_id: int, data_collection_level, crash_reporting_level,
+        self,
+        openkit_configuration: "OpenkitConfiguration",
+        server_id: int,
+        data_collection_level,
+        crash_reporting_level,
     ):
         self.openkit_configuration = openkit_configuration
         self.data_collection_level = data_collection_level

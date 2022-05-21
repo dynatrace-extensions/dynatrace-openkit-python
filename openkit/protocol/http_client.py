@@ -3,7 +3,7 @@ from urllib.parse import quote
 from enum import Enum
 from typing import Optional
 
-import requests
+from ..vendor.mureq import mureq as requests
 
 
 REQUEST_TYPE_MOBILE = "type=m"
@@ -39,16 +39,14 @@ class HttpClient:
         self.monitor_url = self.build_monitor_url(base_url, application_id, server_id)
         self.new_session_url = self.build_session_url()
 
-    def send_request(
-        self, request_type: RequestType, url: str, client_ip_address: Optional[str], data: Optional[str], method: str
-    ):
+    def send_request(self, request_type: RequestType, url: str, client_ip_address: Optional[str], data: Optional[str], method: str):
         self.logger.debug(f"Sending request type {request_type} ({url})")
 
         headers = {}
         if client_ip_address is not None:
             headers = {"X-Client-IP": client_ip_address}
-        r = requests.request(method, url, data=data, headers=headers)
-        self.logger.debug(f"Response for {request_type} ({url}): {r.status_code}: {r.text}")
+        r = requests.request(method, url, body=data, headers=headers)
+        self.logger.debug(f"Response for {request_type} ({url}): {r.status_code}: {r.content}")
         return r
 
     def build_monitor_url(self, base_url, application_id, server_id) -> str:

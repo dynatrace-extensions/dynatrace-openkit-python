@@ -1,11 +1,10 @@
 from typing import TYPE_CHECKING
-from protocol.status_response import StatusResponse
 
-from requests import Response
-from protocol.status_response import StatusResponse
+from ...vendor.mureq.mureq import Response
+from ...protocol.status_response import StatusResponse
 from .beacon_abstract import AbstractBeaconSendingState
 from .beacon_flush import BeaconSendingFlushSessionsState
-from core.communication.state_utils import send_status_request
+from ...core.communication.state_utils import send_status_request
 
 if TYPE_CHECKING:
     from core.beacon_sender import BeaconSendingContext
@@ -29,11 +28,7 @@ class BeaconSendingCaptureOffState(AbstractBeaconSendingState):
 
         current_time = context.current_timestamp()
 
-        delta = (
-            self.sleep_time
-            if self.sleep_time > 0
-            else self.STATUS_CHECK_INTERVAL - (current_time - context.last_status_check_time)
-        )
+        delta = self.sleep_time if self.sleep_time > 0 else self.STATUS_CHECK_INTERVAL - (current_time - context.last_status_check_time)
         if delta > 0 and not context.shutdown_requested:
             context.sleep(delta)
 

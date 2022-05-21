@@ -4,11 +4,11 @@ import logging
 from threading import RLock
 from typing import Optional, List
 
-from core.caching.beacon_cache import BeaconCache, BeaconCacheEvictor
-from protocol.http_client import HttpClient, DEFAULT_SERVER_ID
-from core.beacon_sender import BeaconSender
-from core.session import OpenKitComposite, Session, SessionProxy, NullSession
-from core.configuration.openkit_configuration import OpenkitConfiguration
+from ..core.caching import BeaconCache, BeaconCacheEvictor
+from ..protocol.http_client import HttpClient, DEFAULT_SERVER_ID
+from ..core.beacon_sender import BeaconSender
+from ..core.session import OpenKitComposite, Session, SessionProxy, NullSession
+from ..core.configuration import OpenkitConfiguration
 
 
 class DataCollectionLevel(Enum):
@@ -78,9 +78,7 @@ class Openkit(OpenKitComposite):
 
         # Cache
         self._beacon_cache = BeaconCache(logger)
-        self._beacon_cache_evictor = BeaconCacheEvictor(
-            logger, self._beacon_cache, beacon_cache_max_age, beacon_cache_lower_memory, beacon_cache_upper_memory
-        )
+        self._beacon_cache_evictor = BeaconCacheEvictor(logger, self._beacon_cache, beacon_cache_max_age, beacon_cache_lower_memory, beacon_cache_upper_memory)
 
         # HTTP Client
         self._http_client = HttpClient(self._logger, endpoint, DEFAULT_SERVER_ID, application_id)
@@ -124,7 +122,7 @@ class Openkit(OpenKitComposite):
             try:
                 child.end()
             except Exception as e:
-                self._logger.error(f"Could not close {child}: {e}")
+                self._logger.exception(f"Could not close {child}: {e}")
 
         self._beacon_cache_evictor.stop()
         self._beacon_sender.shutdown()

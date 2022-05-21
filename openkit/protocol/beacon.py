@@ -4,10 +4,10 @@ from typing import TYPE_CHECKING, Optional, Union
 from urllib.parse import quote
 from urllib.parse import quote_plus
 
-from core.caching.beacon_key import BeaconKey
-from core.action import Action, BaseActionImpl
-from protocol.event_type import EventType
-from protocol.http_client import (
+from ..core.caching.key import BeaconKey
+from ..core.action import Action, ActionImpl
+from ..protocol.event_type import EventType
+from ..protocol.http_client import (
     OPENKIT_VERSION,
     PROTOCOL_VERSION,
     PLATFORM_TYPE_OPENKIT,
@@ -16,10 +16,10 @@ from protocol.http_client import (
 )
 
 if TYPE_CHECKING:
-    from core.configuration.beacon_configuration import BeaconConfiguration
-    from core.session import SessionProxy
-    from core.caching.beacon_cache import BeaconCache
-    from protocol.http_client import HttpClient
+    from ..core.configuration.beacon_configuration import BeaconConfiguration
+    from ..core.session import SessionProxy
+    from ..core.caching.cache import BeaconCache
+    from ..protocol.http_client import HttpClient
 
 
 class Beacon:
@@ -191,7 +191,7 @@ class Beacon:
 
         return "".join(string_parts)
 
-    def add_action(self, action: BaseActionImpl):
+    def add_action(self, action: ActionImpl):
 
         if not self.configuration.server_configuration.capture_enabled:
             return
@@ -224,12 +224,10 @@ class Beacon:
 
         self.add_event_data(end_time, "".join(string_parts))
 
-    def report_value(
-        self, parent_action_id, value_name: str, value: Union[str, int, float], timestamp: Optional[datetime] = None
-    ):
+    def report_value(self, parent_action_id, value_name: str, value: Union[str, int, float], timestamp: Optional[datetime] = None):
         if not self.configuration.server_configuration.capture_enabled:
             return
-        
+
         type_to_event_type = {
             str: EventType.VALUE_STRING,
             int: EventType.VALUE_INT,
@@ -244,9 +242,7 @@ class Beacon:
 
         self.add_event_data(event_time, "".join(string_parts))
 
-    def report_event(
-        self, parent_action_id: int, event_name: str, timestamp: Optional[datetime] = None
-    ):
+    def report_event(self, parent_action_id: int, event_name: str, timestamp: Optional[datetime] = None):
         if not self.configuration.server_configuration.capture_enabled:
             return
 
@@ -262,9 +258,7 @@ class Beacon:
 
         self.add_event_data(timestamp, "".join(string_parts))
 
-    def identify_user(
-        self, user_tag: str, timestamp: Optional[datetime] = None
-    ):
+    def identify_user(self, user_tag: str, timestamp: Optional[datetime] = None):
         if not self.configuration.server_configuration.capture_enabled:
             return
 
@@ -280,9 +274,7 @@ class Beacon:
 
         self.add_event_data(timestamp, "".join(string_parts))
 
-    def report_error(
-        self, parent_action_id: int, error_name: str, error_code: int, reason: str, timestamp: Optional[datetime] = None
-    ):
+    def report_error(self, parent_action_id: int, error_name: str, error_code: int, reason: str, timestamp: Optional[datetime] = None):
         if not self.configuration.server_configuration.capture_enabled:
             return
 
@@ -301,9 +293,7 @@ class Beacon:
 
         self.add_event_data(timestamp, "".join(string_parts))
 
-    def build_event(
-        self, event_type: EventType, name: str, parent_action_id: int, event_time: Optional[datetime] = None
-    ) -> (datetime, str):
+    def build_event(self, event_type: EventType, name: str, parent_action_id: int, event_time: Optional[datetime] = None) -> (datetime, str):
         if event_time is None:
             event_time = datetime.now()
 

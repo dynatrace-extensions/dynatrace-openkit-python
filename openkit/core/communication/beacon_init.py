@@ -1,15 +1,15 @@
 from typing import TYPE_CHECKING
 
-from protocol.status_response import StatusResponse
+from ...protocol.status_response import StatusResponse
 from .beacon_abstract import AbstractBeaconSendingState
 from .beacon_capture_off import BeaconSendingCaptureOffState
 from .beacon_terminal import BeaconSendingTerminalState
 from .beacon_capture_on import BeaconSendingCaptureOnState
 
-from core.communication.state_utils import send_status_request
+from openkit.core.communication.state_utils import send_status_request
 
 if TYPE_CHECKING:
-    from core.beacon_sender import BeaconSendingContext
+    from ...core.beacon_sender import BeaconSendingContext
 
 
 class BeaconSendingInitState(AbstractBeaconSendingState):

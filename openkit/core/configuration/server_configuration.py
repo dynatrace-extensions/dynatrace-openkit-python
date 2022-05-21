@@ -1,4 +1,4 @@
-from protocol.status_response import StatusResponse
+from openkit.protocol.status_response import StatusResponse
 
 
 class ServerConfiguration:

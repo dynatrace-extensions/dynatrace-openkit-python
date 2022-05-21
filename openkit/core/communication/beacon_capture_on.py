@@ -1,16 +1,17 @@
 from typing import TYPE_CHECKING
 
-from requests import Response
+from ...vendor.mureq.mureq import Response
 
-from protocol.status_response import StatusResponse
+from ...protocol.status_response import StatusResponse
 from .beacon_abstract import AbstractBeaconSendingState
-from .beacon_flush import BeaconSendingFlushSessionsState
+
+# from .beacon_flush import BeaconSendingFlushSessionsState
 from .beacon_capture_off import BeaconSendingCaptureOffState
 
-from core.configuration.server_configuration import ServerConfiguration
+from ...core.configuration.server_configuration import ServerConfiguration
 
 if TYPE_CHECKING:
-    from core.beacon_sender import BeaconSendingContext
+    from ...core.beacon_sender import BeaconSendingContext
 
 
 class BeaconSendingCaptureOnState(AbstractBeaconSendingState):

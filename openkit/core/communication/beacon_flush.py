@@ -1,12 +1,10 @@
 from typing import TYPE_CHECKING
 
-from requests import Response
-
-from core.communication import AbstractBeaconSendingState
+from ...core.communication import AbstractBeaconSendingState
 
 
 if TYPE_CHECKING:
-    from core.beacon_sender import BeaconSendingContext
+    from ...core.beacon_sender import BeaconSendingContext
 
 
 class BeaconSendingFlushSessionsState(AbstractBeaconSendingState):

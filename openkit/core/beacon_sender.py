@@ -3,15 +3,12 @@ import time
 from threading import Thread, Event, RLock
 from typing import Optional, List
 
-from core.communication import BeaconSendingInitState, AbstractBeaconSendingState
-from core.configuration.server_configuration import ServerConfiguration
-from core.session import SessionImpl
-from protocol.status_response import StatusResponse
+from .communication import BeaconSendingInitState, AbstractBeaconSendingState
+from .configuration.server_configuration import ServerConfiguration
+from .session import SessionImpl
+from ..protocol.status_response import StatusResponse
 
-from requests import Response
-
-
-from protocol.http_client import HttpClient
+from ..protocol.http_client import HttpClient
 
 
 class BeaconSendingContext:

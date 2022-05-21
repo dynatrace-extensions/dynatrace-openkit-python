@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from core.beacon_sender import BeaconSendingContext
-    from requests import Response
+    from ...core.beacon_sender import BeaconSendingContext
+    from ...vendor.mureq.mureq import Response
 
 
-def is_successfull(response: "Response"):
+def is_successful(response: "Response"):
     return response.status_code < 400
 
 

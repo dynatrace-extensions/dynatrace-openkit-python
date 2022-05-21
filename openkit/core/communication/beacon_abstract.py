@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import traceback
 
 if TYPE_CHECKING:
-    from core.beacon_sender import BeaconSendingContext
+    from ...core.beacon_sender import BeaconSendingContext
 
 
 class AbstractBeaconSendingState(ABC):

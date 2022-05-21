@@ -21,7 +21,7 @@ RESPONSE_KEY_SERVER_ID = "serverId"
 RESPONSE_KEY_TIMESTAMP_IN_MILLIS = "timestamp"
 
 if TYPE_CHECKING:
-    from requests import Response
+    from openkit.vendor.mureq.mureq import Response
 
 
 class StatusResponse:
