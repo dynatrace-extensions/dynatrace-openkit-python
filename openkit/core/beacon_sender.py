@@ -5,7 +5,7 @@ from typing import Optional, List
 
 from .communication import BeaconSendingInitState, AbstractBeaconSendingState
 from .configuration.server_configuration import ServerConfiguration
-from .session import SessionImpl
+from .objects.session import SessionImpl
 from ..protocol.status_response import StatusResponse
 
 from ..protocol.http_client import HttpClient

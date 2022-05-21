@@ -1,56 +1,40 @@
-from datetime import datetime
-from enum import Enum
 import logging
 from threading import RLock
-from typing import Optional, List
+from typing import List, Optional
 
-from ..core.caching import BeaconCache, BeaconCacheEvictor
-from ..protocol.http_client import HttpClient, DEFAULT_SERVER_ID
+from .constants import DEFAULT_APPLICATION_VERSION, \
+    DEFAULT_CRASH_REPORTING_LEVEL, \
+    DEFAULT_DATA_COLLECTION_LEVEL, \
+    DEFAULT_LOWER_MEMORY_BOUNDARY_IN_BYTES, \
+    DEFAULT_MANUFACTURER, \
+    DEFAULT_MAX_RECORD_AGE_IN_MILLIS, \
+    DEFAULT_OPERATING_SYSTEM, \
+    DEFAULT_UPPER_MEMORY_BOUNDARY_IN_BYTES
+from .openkit_object import OpenKitObject
+from .session import Session
 from ..core.beacon_sender import BeaconSender
-from ..core.session import OpenKitComposite, Session, SessionProxy, NullSession
+from ..core.caching import BeaconCache, BeaconCacheEvictor
 from ..core.configuration import OpenkitConfiguration
+from ..core.objects.composite import OpenKitComposite
+from ..protocol.http_client import DEFAULT_SERVER_ID, HttpClient
 
 
-class DataCollectionLevel(Enum):
-    OFF = 0
-    PERFORMANCE = 1
-    USER_BEHAVIOR = 2
+class OpenKit(OpenKitObject, OpenKitComposite):
 
-
-class CrashReportingLevel(Enum):
-    OFF = 0
-    OPT_OUT_CRASHES = 1
-    OPT_IN_CRASHES = 2
-
-
-DEFAULT_OPERATING_SYSTEM = "Openkit"
-DEFAULT_MANUFACTURER = "Dynatrace"
-DEFAULT_MODEL_ID = "OpenKitDevice"
-DEFAULT_APPLICATION_VERSION = "Unknown version"
-DEFAULT_MAX_RECORD_AGE_IN_MILLIS = 105 * 60 * 1000  # 1 hour, 45 minutes
-DEFAULT_LOWER_MEMORY_BOUNDARY_IN_BYTES = 80 * 1024 * 1024  # 80 MB
-DEFAULT_UPPER_MEMORY_BOUNDARY_IN_BYTES = 100 * 1024 * 1024  # 100 MB
-DEFAULT_DATA_COLLECTION_LEVEL = DataCollectionLevel.USER_BEHAVIOR.value
-DEFAULT_CRASH_REPORTING_LEVEL = CrashReportingLevel.OPT_IN_CRASHES.value
-
-
-class Openkit(OpenKitComposite):
-    def __init__(
-        self,
-        endpoint: str,
-        application_id: str,
-        device_id: str,
-        logger: logging.Logger = None,
-        os: str = DEFAULT_OPERATING_SYSTEM,
-        manufacturer: str = DEFAULT_MANUFACTURER,
-        version: str = DEFAULT_APPLICATION_VERSION,
-        beacon_cache_max_age: int = DEFAULT_MAX_RECORD_AGE_IN_MILLIS,
-        beacon_cache_lower_memory: int = DEFAULT_LOWER_MEMORY_BOUNDARY_IN_BYTES,
-        beacon_cache_upper_memory: int = DEFAULT_UPPER_MEMORY_BOUNDARY_IN_BYTES,
-        application_name="",
-        data_collection_level=DEFAULT_DATA_COLLECTION_LEVEL,
-        crash_reporting_level=DEFAULT_CRASH_REPORTING_LEVEL,
-    ):
+    def __init__(self,
+                 endpoint: str,
+                 application_id: str,
+                 device_id: int,
+                 logger: Optional[logging.Logger] = None,
+                 os: Optional[str] = DEFAULT_OPERATING_SYSTEM,
+                 manufacturer: Optional[str] = DEFAULT_MANUFACTURER,
+                 version: Optional[str] = DEFAULT_APPLICATION_VERSION,
+                 beacon_cache_max_age: Optional[int] = DEFAULT_MAX_RECORD_AGE_IN_MILLIS,
+                 beacon_cache_lower_memory: Optional[int] = DEFAULT_LOWER_MEMORY_BOUNDARY_IN_BYTES,
+                 beacon_cache_upper_memory: Optional[int] = DEFAULT_UPPER_MEMORY_BOUNDARY_IN_BYTES,
+                 application_name: Optional[str] = "",
+                 data_collection_level: Optional[int] = DEFAULT_DATA_COLLECTION_LEVEL,
+                 crash_reporting_level: Optional[int] = DEFAULT_CRASH_REPORTING_LEVEL):
         super().__init__()
         self._endpoint = endpoint
         self._application_id = application_id
@@ -78,7 +62,11 @@ class Openkit(OpenKitComposite):
 
         # Cache
         self._beacon_cache = BeaconCache(logger)
-        self._beacon_cache_evictor = BeaconCacheEvictor(logger, self._beacon_cache, beacon_cache_max_age, beacon_cache_lower_memory, beacon_cache_upper_memory)
+        self._beacon_cache_evictor = BeaconCacheEvictor(logger,
+                                                        self._beacon_cache,
+                                                        beacon_cache_max_age,
+                                                        beacon_cache_lower_memory,
+                                                        beacon_cache_upper_memory)
 
         # HTTP Client
         self._http_client = HttpClient(self._logger, endpoint, DEFAULT_SERVER_ID, application_id)
@@ -96,33 +84,38 @@ class Openkit(OpenKitComposite):
 
         self._openkit_configuration = OpenkitConfiguration(self)
 
-    def create_session(self, ip: str, start_time: Optional[datetime] = None, device_id=None) -> Session:
-        self._logger.debug(f"create_session(ip={ip}, start_time={start_time}, device_id={device_id})")
+    def wait_for_init_completion(self, timeout_ms: Optional[int] = None) -> bool:
+        raise NotImplementedError("Wait for init completion is not implemented")
 
+    def initialized(self) -> bool:
+        raise NotImplementedError("Initialized is not implemented")
+
+    def create_session(self, ip_address: Optional[str] = None, timestamp: Optional[int] = None) -> Session:
+        self._logger.debug(f"create_session({ip_address}, {timestamp})")
         with self._lock:
             if not self._shutdown:
                 session_proxy = SessionProxy(self, self._beacon_sender, ip, device_id=device_id, start_time=start_time)
-                self._children.append(session_proxy)
+                self._store_child_in_list(session_proxy)
                 return session_proxy
 
-        return NullSession()
-
-    def _on_child_closed(self, child):
-        with self._lock:
-            self._children.remove(child)
-
-    def shutdown(self):
+    def shutdown(self) -> None:
         self._logger.debug("Openkit shutdown requested")
         with self._lock:
             if self._shutdown:
                 return
             self._shutdown = True
 
-        for child in self._children:
-            try:
-                child.end()
-            except Exception as e:
-                self._logger.exception(f"Could not close {child}: {e}")
+        children = self._copy_children()
+        for child in children:
+            child.close()
 
+        # TODO - stop watchdog
         self._beacon_cache_evictor.stop()
         self._beacon_sender.shutdown()
+
+    def close(self):
+        self.shutdown()
+
+    def _on_child_closed(self, child: OpenKitObject):
+        with self._lock:
+            self._remove_child_from_list(child)

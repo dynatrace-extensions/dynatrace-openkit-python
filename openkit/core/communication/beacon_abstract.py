@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 import traceback
 
 if TYPE_CHECKING:
-    from ...core.beacon_sender import BeaconSendingContext
+    from ..beacon_sender import BeaconSendingContext
 
 
 class AbstractBeaconSendingState(ABC):
@@ -14,7 +14,6 @@ class AbstractBeaconSendingState(ABC):
         try:
             self.do_execute(context)
         except Exception as e:
-            print(f"Exception: {e}")
             traceback.print_exc()
             context.shutdown_requested = True
 

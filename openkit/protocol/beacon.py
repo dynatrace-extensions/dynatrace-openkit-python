@@ -5,7 +5,6 @@ from urllib.parse import quote
 from urllib.parse import quote_plus
 
 from ..core.caching.key import BeaconKey
-from ..core.action import Action, ActionImpl
 from ..protocol.event_type import EventType
 from ..protocol.http_client import (
     OPENKIT_VERSION,
@@ -17,7 +16,8 @@ from ..protocol.http_client import (
 
 if TYPE_CHECKING:
     from ..core.configuration.beacon_configuration import BeaconConfiguration
-    from ..core.session import SessionProxy
+    from ..core.objects.session import SessionProxy
+    from ..core.objects.base_action import BaseAction
     from ..core.caching.cache import BeaconCache
     from ..protocol.http_client import HttpClient
 
@@ -191,7 +191,7 @@ class Beacon:
 
         return "".join(string_parts)
 
-    def add_action(self, action: ActionImpl):
+    def add_action(self, action: "BaseAction"):
 
         if not self.configuration.server_configuration.capture_enabled:
             return
@@ -200,7 +200,7 @@ class Beacon:
             self.build_basic_event_data(EventType.ACTION, action.name),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_ACTION_ID, action.id),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_PARENT_ACTION_ID, action.parent_action_id),
-            Beacon.add_key_value_pair(Beacon.BEACON_KEY_START_SEQUENCE_NUMBER, action.start_seq_no),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_START_SEQUENCE_NUMBER, action.start_sequence_number),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0, self.time_since_session_started(action.start_time)),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_END_SEQUENCE_NUMBER, action.end_sequence_number),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_1, int((action.end_time - action.start_time).total_seconds() * 1000)),
@@ -333,7 +333,7 @@ class Beacon:
         self.add_event_data(self.session_start_time, "".join(string_parts))
 
     @property
-    def current_timestamp(self):
+    def current_timestamp(self) -> int:
         return int(datetime.now().timestamp() * 1000)
 
     def time_since_session_started(self, timestamp: datetime):
@@ -427,3 +427,5 @@ class Beacon:
 
     def create_id(self):
         return self.next_id
+
+# TODO - BizEvent

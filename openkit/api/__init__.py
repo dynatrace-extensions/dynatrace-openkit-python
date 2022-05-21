@@ -1,1 +1,1 @@
-from .openkit import OpenKitComposite
+from .openkit import OpenKit

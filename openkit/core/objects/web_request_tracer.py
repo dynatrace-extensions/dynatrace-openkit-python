@@ -1,6 +1,6 @@
 from datetime import datetime
-from ..protocol.beacon import Beacon
-from ..core.session import OpenKitComposite
+from ...protocol.beacon import Beacon
+from .composite import OpenKitComposite
 
 
 class WebRequestTracer:
