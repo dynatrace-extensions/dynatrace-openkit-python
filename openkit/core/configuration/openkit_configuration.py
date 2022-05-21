@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from openkit import Openkit
+    from ... import Openkit
 
 
 class OpenkitConfiguration:

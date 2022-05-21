@@ -6,7 +6,7 @@ from .beacon_capture_off import BeaconSendingCaptureOffState
 from .beacon_terminal import BeaconSendingTerminalState
 from .beacon_capture_on import BeaconSendingCaptureOnState
 
-from openkit.core.communication.state_utils import send_status_request
+from .state_utils import send_status_request
 
 if TYPE_CHECKING:
     from ...core.beacon_sender import BeaconSendingContext

@@ -4,10 +4,10 @@ from ...vendor.mureq.mureq import Response
 from ...protocol.status_response import StatusResponse
 from .beacon_abstract import AbstractBeaconSendingState
 from .beacon_flush import BeaconSendingFlushSessionsState
-from ...core.communication.state_utils import send_status_request
+from ..communication.state_utils import send_status_request
 
 if TYPE_CHECKING:
-    from core.beacon_sender import BeaconSendingContext
+    from ..beacon_sender import BeaconSendingContext
 
 
 class BeaconSendingCaptureOffState(AbstractBeaconSendingState):

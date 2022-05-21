@@ -1,11 +1,11 @@
 from threading import RLock
 import typing
 
-from openkit.core.configuration.server_configuration import ServerConfiguration
+from .server_configuration import ServerConfiguration
 
 
 if typing.TYPE_CHECKING:
-    from openkit.core.configuration.openkit_configuration import OpenkitConfiguration
+    from .openkit_configuration import OpenkitConfiguration
 
 
 class BeaconConfiguration:
