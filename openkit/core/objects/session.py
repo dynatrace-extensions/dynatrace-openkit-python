@@ -119,6 +119,16 @@ class SessionImpl(Session, OpenKitComposite):
     def clear_captured_data(self):
         self.beacon.clear_data()
 
+    def update_server_configuration(self, new_server_config):
+        self.beacon.update_server_configuration(new_server_config)
+
+    @property
+    def data_sending_allowed(self) -> bool:
+        return self.state.is_configured and self.beacon.data_capturing_enabled
+
+    def send_beacon(self, http_client, context):
+        return self.beacon.send(http_client, context)
+
 
 class SessionState:
 
@@ -138,7 +148,7 @@ class SessionState:
     @property
     def is_configured(self) -> bool:
         with self._lock:
-            raise NotImplementedError("is_configured() not implemented")
+            return self.session.beacon.server_configuration_set
 
     @property
     def is_configured_and_finished(self) -> bool:

@@ -116,6 +116,27 @@ class BeaconSendingContext:
         self.disable_capture()
         self.clear_all_session_data()
 
+    def get_all_not_configured_sessions(self) -> List[SessionImpl]:
+        sessions = []
+        for session in self.sessions:
+            if not session.state.is_configured:
+                sessions.append(session)
+        return sessions
+
+    def get_all_finished_and_configured_sessions(self) -> List[SessionImpl]:
+        sessions = []
+        for session in self.sessions:
+            if session.state.is_configured_and_finished:
+                sessions.append(session)
+        return sessions
+
+    def get_all_open_and_configured_sessions(self):
+        sessions = []
+        for session in self.sessions:
+            if session.state.is_configured_and_open:
+                sessions.append(session)
+        return sessions
+
 
 class BeaconSenderThread(Thread):
     def __init__(self, logger: logging.Logger, context: BeaconSendingContext):

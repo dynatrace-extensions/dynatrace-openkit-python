@@ -22,12 +22,12 @@ class BeaconConfiguration:
 
         self.server_configured = False
 
-        self._server_configuration = None
+        self._server_configuration: Optional[ServerConfiguration] = None
         self.server_config_update_callback = None
         self._lock = RLock()
 
     @property
-    def server_configuration(self):
+    def server_configuration(self) -> ServerConfiguration:
         with self._lock:
             if self._server_configuration is None:
                 self._server_configuration = ServerConfiguration()
@@ -46,3 +46,18 @@ class BeaconConfiguration:
         return BeaconConfiguration(openkit_conf,
                                    privacy_config,
                                    server_id)
+
+    def enable_capture(self):
+        self.server_configuration.capture_enabled = True
+
+    def disable_capture(self):
+        self.server_configuration.capture_enabled = False
+
+    def update_capture(self, capture_enabled):
+        self.server_configuration.capture_enabled = capture_enabled
+        self.server_configured = True
+
+    # TODO initializeServerConfiguration
+    # TODO updateServerConfiguration
+    # TODO notifyServerConfigurationUpdate
+    # TODO setServerConfigurationUpdateCallback

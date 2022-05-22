@@ -1,3 +1,4 @@
+import random
 from datetime import datetime
 from threading import RLock, get_ident
 from typing import Optional, TYPE_CHECKING, Union
@@ -108,6 +109,7 @@ class Beacon:
 
         self._next_id = 0
         self._next_sequence_number = 0
+        self.traffic_control_value = random.randint(0, 100)
 
         self._lock = RLock()
 
@@ -461,4 +463,13 @@ class Beacon:
     def clear_data(self):
         self.beacon_cache.delete_cache_entry(self.beacon_key)
 
-# TODO - BizEvent
+    @property
+    def server_configuration_set(self):
+        return self.configuration.server_configured
+
+    @property
+    def data_capturing_enabled(self) -> bool:
+        server_config = self.configuration.server_configuration
+        return server_config.data_sending_allowed and self.traffic_control_value < server_config.traffic_control_percentage
+
+    # TODO - BizEvent

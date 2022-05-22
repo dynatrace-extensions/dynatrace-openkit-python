@@ -43,7 +43,7 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
     def send_new_session_requests(self, context: "BeaconSendingContext"):
 
         response = None
-        not_configured_sessions = [session for session in context.sessions if not session.configured]
+        not_configured_sessions = context.get_all_not_configured_sessions()
         context.logger.debug(f"Sending requests for {len(not_configured_sessions)} not configured sessions")
 
         for session in not_configured_sessions:
@@ -59,7 +59,7 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
     def send_finished_sessions(self, context: "BeaconSendingContext"):
 
         response = None
-        finished_sessions = [session for session in context.sessions if session.configured and session.finished]
+        finished_sessions = context.get_all_finished_and_configured_sessions()
         context.logger.debug(f"Sending requests for {len(finished_sessions)} finished sessions")
 
         for session in finished_sessions:
@@ -68,8 +68,8 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
                 response = session.send_beacon(context.http_client, context)
 
             context.sessions.remove(session)
-            session.remove_captured_data()
-
+            session.clear_captured_data()
+            session.close()
         return response
 
     def send_open_sessions(self, context: "BeaconSendingContext"):
@@ -82,7 +82,7 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
         if not send_open_sessions:
             return
 
-        open_sessions = [session for session in context.sessions if session.configured and not session.finished]
+        open_sessions = context.get_all_open_and_configured_sessions()
         context.logger.debug(f"Sending requests for {len(open_sessions)} open sessions")
 
         for session in open_sessions:

@@ -34,6 +34,7 @@ class ServerConfiguration:
         self.session_split_by_idle_timeout_enabled = session_split_by_idle_timeout_enabled
         self.visit_store_version = visit_store_version
         self.send_interval_in_milliseconds = 120 * 1000  # 2 minutes
+        self.traffic_control_percentage = 100  # TODO - Implement
 
     @staticmethod
     def create_from(status_response: StatusResponse) -> "ServerConfiguration":
@@ -55,6 +56,10 @@ class ServerConfiguration:
 
     def __str__(self):
         return str(self.__dict__)
+
+    @property
+    def data_sending_allowed(self) -> bool:
+        return self.capture_enabled and self.multiplicity > 0
 
 
 class ServerConfigurationUpdateCallback(ABC):
