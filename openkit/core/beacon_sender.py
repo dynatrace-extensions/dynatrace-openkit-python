@@ -1,6 +1,5 @@
 import logging
 import time
-from copy import deepcopy
 from threading import Event, RLock, Thread
 from typing import List, Optional
 
@@ -57,7 +56,7 @@ class BeaconSendingContext:
 
     def clear_all_session_data(self):
         self.logger.debug(f"Deleting all session data from cache")
-        sessions = deepcopy(self.sessions)
+        sessions = self.sessions.copy()
         for session in sessions:
             session.clear_captured_data()
             if session.finished:

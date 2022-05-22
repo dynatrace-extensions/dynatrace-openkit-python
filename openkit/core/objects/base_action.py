@@ -25,7 +25,7 @@ class BaseAction(OpenKitComposite, CancelableOpenKitObject, Action):
         self.name: str = name
 
         if timestamp is None:
-            timestamp = beacon.current_timestamp
+            timestamp = datetime.now()
         self.start_time: datetime = timestamp
         self.end_time: Optional[datetime] = None
 

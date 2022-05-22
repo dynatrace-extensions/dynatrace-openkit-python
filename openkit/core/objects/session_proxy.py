@@ -3,11 +3,13 @@ from datetime import datetime
 from threading import RLock
 from typing import Optional
 
+from .null_root_action import NullRootAction
 from .session import SessionImpl
 from .session_creator import SessionCreator
 from ..beacon_sender import BeaconSender
 from ..configuration import ServerConfiguration
 from ..configuration.server_configuration import ServerConfigurationUpdateCallback
+from ...api.composite import OpenKitComposite
 from ...api.openkit_object import OpenKitObject
 from ...api.root_action import RootAction
 from ...api.session import Session
@@ -18,7 +20,7 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
 
     def __init__(self,
                  logger: logging.Logger,
-                 parent: OpenKitObject,
+                 parent: OpenKitComposite,
                  session_creator: SessionCreator,
                  beacon_sender: BeaconSender,
                  device_id: Optional[int] = None,
@@ -71,25 +73,46 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
         pass
 
     def enter_action(self, name: str, timestamp: Optional[datetime] = None) -> RootAction:
-        pass
+        if not name:
+            self.logger.warning("action name must not be empty")
+            return NullRootAction()
+
+        self.logger.debug(f"enter_action({name}, {timestamp})")
+        with self.lock:
+            if not self.finished:
+                session = self.get_or_split_current_session_by_events()
+                return session.enter_action(name, timestamp)
+
+        return NullRootAction()
 
     def identify_user(self, name: str, timestamp: Optional[datetime] = None) -> None:
-        pass
+        raise NotImplementedError
 
     def report_crash(self, error_name, reason: str, stacktrace: str, timestamp: Optional[datetime] = None) -> None:
-        pass
+        raise NotImplementedError
 
     def trace_web_request(self, url: str, timestamp: Optional[datetime] = None) -> WebRequestTracer:
-        pass
+        raise NotImplementedError
 
     def end(self, send_end_event: bool = True, timestamp: Optional[datetime] = None):
-        pass
+        self.logger.debug("end()")
+        with self.lock:
+            if self.finished:
+                return
+
+        self.close_child_objects(timestamp)
+        self.parent._on_child_closed(self)
+        # TODO -  sessionWatchdog.removeFromSplitByTimeout(this);
 
     def close(self):
-        pass
+        raise NotImplementedError
 
     def _on_child_closed(self, child: OpenKitObject):
-        pass
+        with self.lock:
+            self._remove_child_from_list(child)
+            if isinstance(child, SessionImpl):
+                pass
+                # TODO - sessionWatchdog.dequeueFromClosing((SessionImpl) childObject);
 
     def record_top_level_event_interaction(self):
         self.last_interaction_time = datetime.now()
@@ -104,7 +127,12 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
         self.current_session.identify_user(self.last_user_tag)
 
     def get_or_split_current_session_by_events(self) -> SessionImpl:
-        pass
+        if self.split_by_event_required():
+            self.close_or_enqueue_current_session_for_closing()
+            self.create_split_session_and_make_current()
+            self.retag_current_session()
+
+        return self.current_session
 
     def split_by_event_required(self) -> bool:
         if not self.server_config or not self.server_config.session_split_by_events_enabled:
@@ -119,3 +147,15 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
             close_grace_period = self.server_config.send_interval_in_milliseconds
 
         # TODO sessionWatchdog.closeOrEnqueueForClosing(currentSession, closeGracePeriodInMillis);
+
+    def create_split_session_and_make_current(self):
+        self.create_and_assign_current_session(None, self.server_config)
+
+    def close_child_objects(self, timestamp: Optional[datetime] = None):
+        children = self._copy_children()
+
+        for child in children:
+            if isinstance(child, SessionImpl):
+                child.end(child == self.current_session, timestamp)
+            else:
+                child.close()
