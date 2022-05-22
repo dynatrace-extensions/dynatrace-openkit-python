@@ -81,10 +81,10 @@ class WebRequestTracerImpl(WebRequestTracer, CancelableOpenKitObject):
         self.parent._on_child_closed(self)
         self.parent = None
 
-    def cancel(self):
+    def _cancel(self):
         self.stop(self.response_code, discard_data=True)
 
-    def close(self):
+    def _close(self):
         self.stop(self.response_code)
 
     @property

@@ -69,7 +69,7 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
 
             context.sessions.remove(session)
             session.clear_captured_data()
-            session.close()
+            session._close()
         return response
 
     def send_open_sessions(self, context: "BeaconSendingContext"):

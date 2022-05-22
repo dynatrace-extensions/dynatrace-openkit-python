@@ -77,7 +77,7 @@ class SessionImpl(Session, OpenKitComposite):
 
         children = self._copy_children()
         for child in children:
-            child.close()
+            child._close()
 
         if send_end_event:
             self.beacon.end_session()
@@ -101,7 +101,7 @@ class SessionImpl(Session, OpenKitComposite):
     # TODO - Send Biz event
     # TODO - Other beacon and config methods
 
-    def close(self):
+    def _close(self):
         self.end()
 
     def _on_child_closed(self, child: OpenKitObject):

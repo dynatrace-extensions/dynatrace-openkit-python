@@ -5,7 +5,7 @@ from typing import Optional
 from .action import Action
 
 
-class RootAction(ABC):
+class RootAction(Action, ABC):
 
     @abstractmethod
     def enter_action(self, name: str, timestamp: Optional[datetime] = None) -> Action:

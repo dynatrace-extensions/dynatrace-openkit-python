@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Union, Optional
+from typing import Optional, Union
 
 from .base_action import Action
 from .web_request_tracer import WebRequestTracer
@@ -13,10 +13,17 @@ class NullAction(Action):
     def report_event(self, event_name: str, timestamp: Optional[datetime] = None) -> "Action":
         return self
 
-    def report_value(self, value_name: str, value: Union[str, int, float], timestamp: Optional[datetime] = None) -> "Action":
+    def report_value(self,
+                     value_name: str,
+                     value: Union[str, int, float],
+                     timestamp: Optional[datetime] = None) -> "Action":
         return self
 
-    def report_error(self, error_name: str, error_code: int, reason: str, timestamp: Optional[datetime] = None) -> "Action":
+    def report_error(self,
+                     error_name: str,
+                     error_code: int,
+                     reason: str,
+                     timestamp: Optional[datetime] = None) -> "Action":
         return self
 
     def trace_web_request(self, url: str, timestamp: Optional[datetime] = None) -> WebRequestTracer:
@@ -31,5 +38,5 @@ class NullAction(Action):
     def get_duration_in_milliseconds(self) -> int:
         return 0
 
-    def close(self):
+    def _close(self):
         pass

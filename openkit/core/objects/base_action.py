@@ -39,10 +39,10 @@ class BaseAction(OpenKitComposite, CancelableOpenKitObject, Action):
         with self.lock:
             self._remove_child_from_list(child)
 
-    def cancel(self):
+    def _cancel(self):
         self.cancel_action()
 
-    def close(self):
+    def _close(self):
         self.leave_action()
 
     def report_event(self, event_name: str, timestamp: Optional[datetime] = None) -> "Action":
@@ -120,12 +120,12 @@ class BaseAction(OpenKitComposite, CancelableOpenKitObject, Action):
         for child in children:
             if discard:
                 if isinstance(child, CancelableOpenKitObject):
-                    child.cancel()
+                    child._cancel()
                 else:
                     self.logger.warning(f"closing non cancelable child {child}")
-                    child.close()
+                    child._close()
             else:
-                child.close()
+                child._close()
 
         if timestamp is None:
             timestamp = datetime.now()

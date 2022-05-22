@@ -128,13 +128,13 @@ class OpenKit(OpenKitObject, OpenKitComposite):
 
         children = self._copy_children()
         for child in children:
-            child.close()
+            child._close()
 
         # TODO - stop watchdog
         self._beacon_cache_evictor.stop()
         self._beacon_sender.shutdown()
 
-    def close(self):
+    def _close(self):
         self.shutdown()
 
     def _on_child_closed(self, child: OpenKitObject):

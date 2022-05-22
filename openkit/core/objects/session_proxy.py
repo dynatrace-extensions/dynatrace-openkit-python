@@ -104,7 +104,7 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
         self.parent._on_child_closed(self)
         # TODO -  sessionWatchdog.removeFromSplitByTimeout(this);
 
-    def close(self):
+    def _close(self):
         raise NotImplementedError
 
     def _on_child_closed(self, child: OpenKitObject):
@@ -158,4 +158,4 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
             if isinstance(child, SessionImpl):
                 child.end(child == self.current_session, timestamp)
             else:
-                child.close()
+                child._close()

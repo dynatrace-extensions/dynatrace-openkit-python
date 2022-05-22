@@ -25,5 +25,5 @@ class NullSession(Session):
     def end(self, send_end_event: bool = True, timestamp: Optional[datetime] = None):
         pass
 
-    def close(self):
+    def _close(self):
         pass
