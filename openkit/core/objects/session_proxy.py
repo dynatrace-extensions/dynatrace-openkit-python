@@ -38,12 +38,11 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
 
         self.finished = False
         self.last_user_tag = None
+        self.lock = RLock()
 
         self.server_config: Optional[ServerConfiguration] = None
         current_server_config = beacon_sender.last_server_configuration
         self.create_and_assign_current_session(current_server_config, None)
-
-        self.lock = RLock()
 
     def create_and_assign_current_session(self,
                                           initial_config: Optional[ServerConfiguration],

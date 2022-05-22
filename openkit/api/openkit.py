@@ -3,9 +3,7 @@ from threading import RLock
 from typing import List, Optional
 
 from .composite import OpenKitComposite
-from .constants import DEFAULT_APPLICATION_VERSION, \
-    DEFAULT_CRASH_REPORTING_LEVEL, \
-    DEFAULT_DATA_COLLECTION_LEVEL, \
+from .constants import CrashReportingLevel, DEFAULT_APPLICATION_VERSION, \
     DEFAULT_LOWER_MEMORY_BOUNDARY_IN_BYTES, \
     DEFAULT_MANUFACTURER, \
     DEFAULT_MAX_RECORD_AGE_IN_MILLIS, \
@@ -16,8 +14,12 @@ from .session import Session
 from ..core.beacon_sender import BeaconSender
 from ..core.caching import BeaconCache, BeaconCacheEvictor
 from ..core.configuration import OpenkitConfiguration
+from ..core.configuration.privacy_configuration import DataCollectionLevel, PrivacyConfiguration
+from ..core.objects.null_session import NullSession
+from ..core.objects.session_creator import SessionCreator
 from ..core.objects.session_proxy import SessionProxy
 from ..protocol.http_client import DEFAULT_SERVER_ID, HttpClient
+from ..providers.session_id import SessionIDProvider
 
 
 class OpenKit(OpenKitObject, OpenKitComposite):
@@ -34,8 +36,7 @@ class OpenKit(OpenKitObject, OpenKitComposite):
                  beacon_cache_lower_memory: Optional[int] = DEFAULT_LOWER_MEMORY_BOUNDARY_IN_BYTES,
                  beacon_cache_upper_memory: Optional[int] = DEFAULT_UPPER_MEMORY_BOUNDARY_IN_BYTES,
                  application_name: Optional[str] = "",
-                 data_collection_level: Optional[int] = DEFAULT_DATA_COLLECTION_LEVEL,
-                 crash_reporting_level: Optional[int] = DEFAULT_CRASH_REPORTING_LEVEL):
+                 privacy_config: Optional[PrivacyConfiguration] = None):
         super().__init__()
         self._endpoint = endpoint
         self._application_id = application_id
@@ -45,8 +46,10 @@ class OpenKit(OpenKitObject, OpenKitComposite):
         self._version = version
         self._application_name = application_name
 
-        self._data_collection_level = data_collection_level
-        self._crash_reporting_level = crash_reporting_level
+        if privacy_config is None:
+            privacy_config = PrivacyConfiguration(DataCollectionLevel.USER_BEHAVIOR, CrashReportingLevel.OPT_IN_CRASHES)
+        self._privacy_config = privacy_config
+        self._session_id_provider = SessionIDProvider()
 
         if logger is None:
             logger = logging.getLogger(__name__)
@@ -81,7 +84,7 @@ class OpenKit(OpenKitObject, OpenKitComposite):
         self._lock = RLock()
 
         self._beacon_cache_evictor.start()
-        self._beacon_sender.initalize()
+        self._beacon_sender.initialize()
 
         self._openkit_configuration = OpenkitConfiguration(self)
 
@@ -91,13 +94,30 @@ class OpenKit(OpenKitObject, OpenKitComposite):
     def initialized(self) -> bool:
         raise NotImplementedError("Initialized is not implemented")
 
-    def create_session(self, ip_address: Optional[str] = None, timestamp: Optional[int] = None) -> Session:
+    def create_session(self,
+                       ip_address: Optional[str] = None,
+                       timestamp: Optional[int] = None,
+                       device_id: Optional[int] = None) -> Session:
         self._logger.debug(f"create_session({ip_address}, {timestamp})")
         with self._lock:
             if not self._shutdown:
-                session_proxy = SessionProxy(self, self._beacon_sender, ip, device_id=device_id, start_time=start_time)
+                session_creator = SessionCreator(self._logger,
+                                                 self._openkit_configuration,
+                                                 self._privacy_config,
+                                                 self._beacon_cache,
+                                                 ip_address,
+                                                 DEFAULT_SERVER_ID,
+                                                 self._session_id_provider)
+                session_proxy = SessionProxy(self._logger,
+                                             self,
+                                             session_creator,
+                                             self._beacon_sender,
+                                             device_id,
+                                             timestamp)
                 self._store_child_in_list(session_proxy)
                 return session_proxy
+
+        return NullSession()
 
     def shutdown(self) -> None:
         self._logger.debug("Openkit shutdown requested")

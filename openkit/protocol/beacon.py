@@ -151,8 +151,10 @@ class Beacon:
             self.add_key_value_pair(self.BEACON_KEY_DEVICE_OS, openkit_config.operating_system),
             self.add_key_value_pair(self.BEACON_KEY_DEVICE_MANUFACTURER, openkit_config.manufacturer),
             self.add_key_value_pair(self.BEACON_KEY_DEVICE_MODEL, openkit_config.model_id),
-            self.add_key_value_pair(self.BEACON_KEY_DATA_COLLECTION_LEVEL, self.configuration.data_collection_level),
-            self.add_key_value_pair(self.BEACON_KEY_CRASH_REPORTING_LEVEL, self.configuration.crash_reporting_level),
+            self.add_key_value_pair(self.BEACON_KEY_DATA_COLLECTION_LEVEL,
+                                    self.configuration.privacy_config.data_collection_level.value),
+            self.add_key_value_pair(self.BEACON_KEY_CRASH_REPORTING_LEVEL,
+                                    self.configuration.privacy_config.crash_reporting_level.value),
         ]
 
         return "".join(string_parts)
@@ -455,5 +457,8 @@ class Beacon:
 
     def update_server_config(self, updated_config):
         pass
-    
+
+    def clear_data(self):
+        self.beacon_cache.delete_cache_entry(self.beacon_key)
+
 # TODO - BizEvent

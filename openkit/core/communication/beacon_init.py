@@ -1,12 +1,11 @@
 from typing import TYPE_CHECKING
 
-from ...protocol.status_response import StatusResponse
 from .beacon_abstract import AbstractBeaconSendingState
 from .beacon_capture_off import BeaconSendingCaptureOffState
-from .beacon_terminal import BeaconSendingTerminalState
 from .beacon_capture_on import BeaconSendingCaptureOnState
-
+from .beacon_terminal import BeaconSendingTerminalState
 from .state_utils import send_status_request
+from ...protocol.status_response import StatusResponse
 
 if TYPE_CHECKING:
     from ...core.beacon_sender import BeaconSendingContext
@@ -33,11 +32,11 @@ class BeaconSendingInitState(AbstractBeaconSendingState):
         r = self.execute_status_request(context)
 
         if context.shutdown_requested:
-            context.init_succeeded = False
+            context.init_completed(False)
         elif r.status_code <= 400:
             context.handle_response(StatusResponse(r))
             context.next_state = BeaconSendingCaptureOnState() if context.capture_on else BeaconSendingCaptureOffState()
-            context.init_succeeded = True
+            context.init_completed(True)
 
     def execute_status_request(self, context: "BeaconSendingContext"):
 
@@ -46,7 +45,9 @@ class BeaconSendingInitState(AbstractBeaconSendingState):
             context.last_open_session_beacon_send_time = current_timestamp
             context.last_status_check_time = current_timestamp
 
-            r = send_status_request(context, self.MAX_INITIAL_STATUS_REQUEST_RETRIES, self.INITIAL_RETRY_SLEEP_TIME_MILLISECONDS)
+            r = send_status_request(context,
+                                    self.MAX_INITIAL_STATUS_REQUEST_RETRIES,
+                                    self.INITIAL_RETRY_SLEEP_TIME_MILLISECONDS)
             if context.shutdown_requested or r.status_code <= 400:
                 break
 
@@ -54,12 +55,16 @@ class BeaconSendingInitState(AbstractBeaconSendingState):
             if r.status_code == 429:
                 if "retry-after" in r.headers:
                     sleep_time = int(r.headers.get("retry-after")) * 1000
-                    # TODO: Implement disable capturing
+                    context.disable_capture_and_clear()
 
             context.sleep(sleep_time)
-            self.reinitialize_delay_index = min(self.reinitialize_delay_index + 1, len(self.REINIT_DELAY_MILLISECONDS) - 1)
+            self.reinitialize_delay_index = min(self.reinitialize_delay_index + 1,
+                                                len(self.REINIT_DELAY_MILLISECONDS) - 1)
 
         return r
 
     def get_shutdown_state(self):
         return BeaconSendingTerminalState()
+
+    def __repr__(self):
+        return "BeaconSendingInitState"

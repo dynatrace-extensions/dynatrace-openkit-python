@@ -1,14 +1,15 @@
 import logging
 import time
-from threading import Thread, Event, RLock
-from typing import Optional, List
+from copy import deepcopy
+from threading import Event, RLock, Thread
+from typing import List, Optional
 
-from .communication import BeaconSendingInitState, AbstractBeaconSendingState
+from .communication import AbstractBeaconSendingState, BeaconSendingInitState
+from .communication.countdown_latch import CountDownLatch
 from .configuration.server_configuration import ServerConfiguration
 from .objects.session import SessionImpl
-from ..protocol.status_response import StatusResponse
-
 from ..protocol.http_client import HttpClient
+from ..protocol.status_response import StatusResponse
 
 
 class BeaconSendingContext:
@@ -23,7 +24,9 @@ class BeaconSendingContext:
         self.last_open_session_beacon_send_time = None
         self.last_status_check_time = None
         self.shutdown_requested = False
-        self.init_succeded = False
+        self.init_succeeded = False
+
+        self.countdown_latch = CountDownLatch()
 
         self.current_state: AbstractBeaconSendingState = BeaconSendingInitState()
         self.next_state = None
@@ -54,7 +57,7 @@ class BeaconSendingContext:
 
     def clear_all_session_data(self):
         self.logger.debug(f"Deleting all session data from cache")
-        sessions = [session for session in self.sessions]
+        sessions = deepcopy(self.sessions)
         for session in sessions:
             session.clear_captured_data()
             if session.finished:
@@ -105,6 +108,14 @@ class BeaconSendingContext:
         with self._lock:
             return self.last_response_attributes.send_interval
 
+    def init_completed(self, success: bool):
+        self.init_succeeded = success
+        self.countdown_latch.count_down()
+
+    def disable_capture_and_clear(self):
+        self.disable_capture()
+        self.clear_all_session_data()
+
 
 class BeaconSenderThread(Thread):
     def __init__(self, logger: logging.Logger, context: BeaconSendingContext):
@@ -116,8 +127,12 @@ class BeaconSenderThread(Thread):
     def run(self):
         self.logger.debug("BeaconSenderThread - Running")
         while not self.context.terminal:
-            self.context.execute_current_state()
-            if self.shutdown_flag.is_set():
+            try:
+                self.context.execute_current_state()
+                if self.shutdown_flag.is_set():
+                    break
+            except KeyboardInterrupt:
+                self.logger.debug("BeaconSenderThread - KeyboardInterrupt")
                 break
 
         self.logger.debug("BeaconSenderThread - Exiting")
@@ -133,7 +148,7 @@ class BeaconSender:
     def server_id(self):
         return self.context.server_id
 
-    def initalize(self):
+    def initialize(self):
         self.thread = BeaconSenderThread(self.logger, self.context)
         self.thread.start()
 

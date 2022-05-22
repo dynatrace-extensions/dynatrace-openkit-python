@@ -116,6 +116,9 @@ class SessionImpl(Session, OpenKitComposite):
     def update_server_config(self, updated_config):
         self.beacon.update_server_config(updated_config)
 
+    def clear_captured_data(self):
+        self.beacon.clear_data()
+
 
 class SessionState:
 
