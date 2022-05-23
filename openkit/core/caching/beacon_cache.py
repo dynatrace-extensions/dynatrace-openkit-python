@@ -1,8 +1,8 @@
-from datetime import datetime, timedelta
 import functools
 import logging
 import sys
-from threading import RLock, Thread, Condition, Event
+from datetime import datetime, timedelta
+from threading import Condition, Event, RLock, Thread
 from typing import Dict, List
 
 from .beacon_key import BeaconKey
@@ -22,7 +22,7 @@ class BeaconCacheRecord:
         return self.timestamp < other.timestamp
 
     def __eq__(self, other):
-        return self.timestamp == other.timestamp
+        return self.timestamp == other.timestamp and self.data == other.data
 
     def __repr__(self):
         return f"BeaconCacheRecord({self.timestamp}, '{self.data}', {self.size()})"
@@ -223,12 +223,12 @@ class BeaconCache:
 
 class BeaconCacheEvictor(Thread):
     def __init__(
-        self,
-        logger: logging.Logger,
-        beacon_cache: BeaconCache,
-        beacon_cache_max_age: int,
-        beacon_cache_lower_memory: int,
-        beacon_cache_upper_memory: int,
+            self,
+            logger: logging.Logger,
+            beacon_cache: BeaconCache,
+            beacon_cache_max_age: int,
+            beacon_cache_lower_memory: int,
+            beacon_cache_upper_memory: int,
     ):
         Thread.__init__(self, name="BeaconCacheEvictor")
         self.logger = logger

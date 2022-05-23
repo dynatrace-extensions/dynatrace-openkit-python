@@ -1,18 +1,18 @@
-from datetime import datetime, timedelta
-from threading import Thread, Condition, Event
 import logging
+from datetime import datetime, timedelta
+from threading import Condition, Event, Thread
 
-from .cache import BeaconCache
+from .beacon_cache import BeaconCache
 
 
 class BeaconCacheEvictor(Thread):
     def __init__(
-        self,
-        logger: logging.Logger,
-        beacon_cache: BeaconCache,
-        beacon_cache_max_age: int,
-        beacon_cache_lower_memory: int,
-        beacon_cache_upper_memory: int,
+            self,
+            logger: logging.Logger,
+            beacon_cache: BeaconCache,
+            beacon_cache_max_age: int,
+            beacon_cache_lower_memory: int,
+            beacon_cache_upper_memory: int,
     ):
         self.logger = logger
         self.beacon_cache = beacon_cache
@@ -65,7 +65,8 @@ class BeaconCacheEvictor(Thread):
                     old_len_events = len(entry.events)
                     entry.actions = [action for action in entry.actions if action.timestamp > min_allowed_time]
                     entry.events = [event for event in entry.events if event.timestamp > min_allowed_time]
-                    entry.total_bytes = sum(action.size() for action in entry.actions) + sum(event.size() for event in entry.events)
+                    entry.total_bytes = sum(action.size() for action in entry.actions) + sum(
+                        event.size() for event in entry.events)
                     actions_deleted += old_len_actions - len(entry.actions)
                     events_deleted += old_len_events - len(entry.events)
 

@@ -5,7 +5,7 @@ from typing import Optional, TYPE_CHECKING, Union
 from urllib.parse import quote
 from urllib.parse import quote_plus
 
-from ..core.caching.key import BeaconKey
+from ..core.caching.beacon_key import BeaconKey
 from ..core.configuration.server_configuration import ServerConfigurationUpdateCallback
 from ..protocol.event_type import EventType
 from ..protocol.http_client import (AGENT_TECHNOLOGY_TYPE,
