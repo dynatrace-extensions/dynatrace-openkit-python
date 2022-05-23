@@ -1,6 +1,6 @@
 # Dynatrace OpenKit Python
 
-| :bangbang: | Not supported by dynatrace, use at your own risk! |
+| :bangbang: | Not supported by Dynatrace, use at your own risk! |
 |:----------:|:--------------------------------------------------|
 
 This project provides a python implementation
