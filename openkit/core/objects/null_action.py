@@ -32,10 +32,10 @@ class NullAction(Action):
     def leave_action(self, timestamp: Optional[datetime] = None) -> "Action":
         return self.parent
 
-    def cancel_action(self) -> "Action":
+    def _cancel_action(self) -> "Action":
         return self.parent
 
-    def get_duration_in_milliseconds(self) -> int:
+    def _get_duration_in_milliseconds(self) -> int:
         return 0
 
     def _close(self):

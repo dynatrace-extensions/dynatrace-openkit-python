@@ -40,7 +40,7 @@ class BaseAction(OpenKitComposite, CancelableOpenKitObject, Action):
             self._remove_child_from_list(child)
 
     def _cancel(self):
-        self.cancel_action()
+        self._cancel_action()
 
     def _close(self):
         self.leave_action()
@@ -100,11 +100,11 @@ class BaseAction(OpenKitComposite, CancelableOpenKitObject, Action):
         self.logger.debug(f"leave_action({self.name})")
         return self.do_leave_action(False, timestamp)
 
-    def cancel_action(self) -> Optional["Action"]:
+    def _cancel_action(self) -> Optional["Action"]:
         self.logger.debug(f"cancel_action({self.name})")
         return self.do_leave_action(True)
 
-    def get_duration_in_milliseconds(self) -> int:
+    def _get_duration_in_milliseconds(self) -> int:
         with self.lock:
             if self.was_left:
                 return int((self.end_time - self.start_time).total_seconds() * 1000)

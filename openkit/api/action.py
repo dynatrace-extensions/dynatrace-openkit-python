@@ -13,11 +13,18 @@ class Action(ABC, OpenKitObject):
         pass
 
     @abstractmethod
-    def report_value(self, value_name: str, value: Union[str, int, float], timestamp: Optional[datetime] = None) -> "Action":
+    def report_value(self,
+                     value_name: str,
+                     value: Union[str, int, float],
+                     timestamp: Optional[datetime] = None) -> "Action":
         pass
 
     @abstractmethod
-    def report_error(self, error_name: str, error_code: int, reason: str, timestamp: Optional[datetime] = None) -> "Action":
+    def report_error(self,
+                     error_name: str,
+                     error_code: int,
+                     reason: str,
+                     timestamp: Optional[datetime] = None) -> "Action":
         pass
 
     @abstractmethod
@@ -29,9 +36,9 @@ class Action(ABC, OpenKitObject):
         pass
 
     @abstractmethod
-    def cancel_action(self) -> Optional["Action"]:
+    def _cancel_action(self) -> Optional["Action"]:
         pass
 
     @abstractmethod
-    def get_duration_in_milliseconds(self) -> int:
+    def _get_duration_in_milliseconds(self) -> int:
         pass

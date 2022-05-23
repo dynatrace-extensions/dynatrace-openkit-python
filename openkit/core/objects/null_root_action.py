@@ -35,10 +35,10 @@ class NullRootAction(RootAction):
     def leave_action(self, timestamp: Optional[datetime] = None) -> Optional["Action"]:
         return None
 
-    def cancel_action(self) -> Optional["Action"]:
+    def _cancel_action(self) -> Optional["Action"]:
         return None
 
-    def get_duration_in_milliseconds(self) -> int:
+    def _get_duration_in_milliseconds(self) -> int:
         return 0
 
     def _close(self):
