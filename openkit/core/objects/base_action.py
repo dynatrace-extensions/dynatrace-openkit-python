@@ -18,7 +18,7 @@ class BaseAction(OpenKitComposite, CancelableOpenKitObject, Action):
         super().__init__()
         self.logger: logging.Logger = logger
         self.parent: OpenKitComposite = parent
-        self.parent_action_id: int = parent._action_id
+        self.parent_action_id: int = parent.id
 
         self.id: int = beacon.create_id()
         self.end_sequence_number: int = -1

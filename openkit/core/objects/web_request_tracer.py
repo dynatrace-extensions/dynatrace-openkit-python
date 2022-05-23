@@ -21,8 +21,7 @@ class WebRequestTracerImpl(WebRequestTracer, CancelableOpenKitObject):
         self.parent = parent
         self.url = url
         self.beacon = beacon
-        self.parent_action_id = parent._action_id
-        self.parent_action_id = parent._action_id
+        self.parent_action_id = parent.id
         self.start_seq_no = self.beacon.next_sequence_number
         self.tag = self.beacon.create_tag(self.parent_action_id, self.start_seq_no)
         if timestamp is None:

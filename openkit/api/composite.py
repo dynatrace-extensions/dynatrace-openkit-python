@@ -9,6 +9,7 @@ class OpenKitComposite:
 
     def __init__(self):
         self._children: List[OpenKitObject] = []
+        self._id = self._DEFAULT_ACTION_ID
 
     def _store_child_in_list(self, child: OpenKitObject):
         self._children.append(child)
@@ -24,8 +25,12 @@ class OpenKitComposite:
         return len(self._children)
 
     @property
-    def _action_id(self):
-        return self._DEFAULT_ACTION_ID
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, value):
+        self._id = value
 
     @abstractmethod
     def _on_child_closed(self, child: OpenKitObject):
