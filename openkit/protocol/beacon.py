@@ -17,7 +17,7 @@ from ..protocol.http_client import (AGENT_TECHNOLOGY_TYPE,
 if TYPE_CHECKING:
     from ..core.configuration.beacon_configuration import BeaconConfiguration
     from ..core.objects.base_action import BaseAction
-    from ..core.caching.cache import BeaconCache
+    from ..core.caching.beacon_cache import BeaconCache
     from ..protocol.http_client import HttpClient
     from ..core.objects.session_creator import SessionCreator
 
@@ -139,15 +139,17 @@ class Beacon:
             self.add_key_value_pair(self.BEACON_KEY_APPLICATION_VERSION, openkit_config.application_version),
             self.add_key_value_pair(self.BEACON_KEY_PLATFORM_TYPE, PLATFORM_TYPE_OPENKIT),
             self.add_key_value_pair(self.BEACON_KEY_AGENT_TECHNOLOGY_TYPE, AGENT_TECHNOLOGY_TYPE),
+
             # device/visitor ID, session number and IP address
             self.add_key_value_pair(self.BEACON_KEY_VISITOR_ID, self.device_id),
             self.add_key_value_pair(self.BEACON_KEY_SESSION_NUMBER, self.session_number),
-            self.add_key_value_pair(self.BEACON_KEY_SESSION_SEQUENCE, self.session_sequence_number),
             self.add_key_value_pair(self.BEACON_KEY_CLIENT_IP_ADDRESS, self.ip_address),
+
             # platform information
             self.add_key_value_pair(self.BEACON_KEY_DEVICE_OS, openkit_config.operating_system),
             self.add_key_value_pair(self.BEACON_KEY_DEVICE_MANUFACTURER, openkit_config.manufacturer),
             self.add_key_value_pair(self.BEACON_KEY_DEVICE_MODEL, openkit_config.model_id),
+
             self.add_key_value_pair(self.BEACON_KEY_DATA_COLLECTION_LEVEL,
                                     self.configuration.privacy_config.data_collection_level.value),
             self.add_key_value_pair(self.BEACON_KEY_CRASH_REPORTING_LEVEL,
@@ -342,7 +344,7 @@ class Beacon:
             string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_BYTES_RECEIVED,
                                                           web_request_tracer.bytes_received))
         if hasattr(web_request_tracer, "bytes_sent"):
-            string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_BYTES_RECEIVED,
+            string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_BYTES_SENT,
                                                           web_request_tracer.bytes_sent))
 
         self.add_event_data(self.session_start_time, "".join(string_parts))
@@ -361,7 +363,9 @@ class Beacon:
         self.configuration.server_configured = True
 
     def send(self, http_client: "HttpClient", additional_params):
-        while True:
+
+        self.beacon_cache.prepare_data_for_sending(self.beacon_key)
+        while self.beacon_cache.has_data_for_sending(self.beacon_key):
 
             string_parts = [
                 self.immutable_beacon_data,
@@ -377,9 +381,12 @@ class Beacon:
                 Beacon.BEACON_DATA_DELIMITER,
             )
 
-            if chunk is None or not chunk:
+            if not chunk:
                 return
 
+            # ugly hack
+            chunk = chunk.lstrip("&")
+            
             encoded_chunk = b""
             try:
                 encoded_chunk = chunk.encode("UTF-8")
@@ -404,9 +411,7 @@ class Beacon:
     def append_mutable_beacon_data(self):
         string_parts = [
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_VISIT_STORE_VERSION, self.visit_store_version),
-            Beacon.BEACON_DATA_DELIMITER,
             self.create_timestamp_data(),
-            Beacon.BEACON_DATA_DELIMITER,
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_MULTIPLICITY,
                                       self.configuration.server_configuration.multiplicity),
         ]
@@ -435,6 +440,8 @@ class Beacon:
 
     @staticmethod
     def add_key_value_pair(key: str, value: Union[str, int, float]):
+        if value != 0 and not value:
+            return ""
         string_parts = [Beacon.append_key(key), str(value)]
         return "".join(string_parts)
 
