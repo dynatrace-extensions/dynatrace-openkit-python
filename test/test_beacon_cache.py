@@ -1,16 +1,13 @@
-from datetime import datetime, timedelta
 import logging
-import sys
+from datetime import datetime, timedelta
 
-sys.path.append("..")
-
-from core.caching.beacon_cache import BeaconCache, BeaconCacheEvictor
+from openkit.core.caching.beacon_cache import BeaconCache, BeaconCacheEvictor
+from openkit.core.caching.key import BeaconKey
 
 logger = logging.getLogger(__name__)
 
 
 def test_cache_space_eviction():
-
     c = BeaconCache(logger)
     minimum_cache_size = 1 * 1024 * 1024  # 1 MB
     b = BeaconCacheEvictor(logger, c, 20000, 1 * 1024 * 1024, 0)
@@ -18,7 +15,7 @@ def test_cache_space_eviction():
 
     # Adds about 4.88 MB of data
     for i in range(5):
-        c.add_action(i, datetime.now(), "A" * 1024 * 1000)
+        c.add_action(BeaconKey(i, i), datetime.now(), "A" * 1024 * 1000)
 
     b.space_eviction()
 
@@ -29,7 +26,6 @@ def test_cache_space_eviction():
 
 
 def test_cache_time_eviction():
-
     c = BeaconCache(logger)
 
     # The maximum record age is 20 seconds
@@ -37,11 +33,11 @@ def test_cache_time_eviction():
     b.start()
 
     # Adds 1 record with current timestamp
-    c.add_action(10, datetime.now(), "A" * 1024 * 1000)
+    c.add_action(BeaconKey(10, 10), datetime.now(), "A" * 1024 * 1000)
 
     # Adds 5 records that are 30 seconds old
     for i in range(5):
-        c.add_action(i, datetime.now() - timedelta(seconds=30), "A" * 1024 * 1000)
+        c.add_action(BeaconKey(i, i), datetime.now() - timedelta(seconds=30), "A" * 1024 * 1000)
 
     b.time_eviction()
     b.stop()
