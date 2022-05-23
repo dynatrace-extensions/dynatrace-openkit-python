@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from ...api.web_request_tracer import WebRequestTracer
@@ -13,8 +14,8 @@ class NullWebRequestTracer(WebRequestTracer):
     def set_bytes_received(self, bytes_received: int) -> "WebRequestTracer":
         return self
 
-    def start(self, timestamp: Optional[int] = None) -> "WebRequestTracer":
+    def start(self, timestamp: Optional[datetime] = None) -> "WebRequestTracer":
         return self
 
-    def stop(self, response_code: int, timestamp: Optional[int] = None) -> "WebRequestTracer":
+    def stop(self, response_code: int, timestamp: Optional[datetime] = None) -> "WebRequestTracer":
         return self

@@ -1,4 +1,5 @@
 import logging
+import signal
 from threading import RLock
 from typing import List, Optional
 
@@ -82,11 +83,15 @@ class OpenKit(OpenKitObject, OpenKitComposite):
         # TODO: Implement Session Watchdog
 
         self._lock = RLock()
+        self._openkit_configuration = OpenkitConfiguration(self)
 
+        # Call shutdown on exit signals
+        signal.signal(signal.SIGINT, self._signal_handler)
         self._beacon_cache_evictor.start()
         self._beacon_sender.initialize()
 
-        self._openkit_configuration = OpenkitConfiguration(self)
+    def _signal_handler(self, signal_number: int, frame):
+        self.shutdown()
 
     def wait_for_init_completion(self, timeout_ms: Optional[int] = None) -> bool:
         raise NotImplementedError("Wait for init completion is not implemented")

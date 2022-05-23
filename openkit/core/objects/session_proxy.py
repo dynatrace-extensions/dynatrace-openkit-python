@@ -4,6 +4,7 @@ from threading import RLock
 from typing import Optional
 
 from .null_root_action import NullRootAction
+from .null_web_request_tracer import NullWebRequestTracer
 from .session import SessionImpl
 from .session_creator import SessionCreator
 from ..beacon_sender import BeaconSender
@@ -98,7 +99,19 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
         raise NotImplementedError
 
     def trace_web_request(self, url: str, timestamp: Optional[datetime] = None) -> WebRequestTracer:
-        raise NotImplementedError
+        if not url:
+            self.logger.warning("url must not be empty")
+            return NullWebRequestTracer()
+
+        self.logger.debug(f"trace_web_request({url}, {timestamp})")
+
+        with self.lock:
+            if not self.finished:
+                session = self.get_or_split_current_session_by_events()
+                self.record_top_level_event_interaction()
+                return session.trace_web_request(url, timestamp)
+
+        return NullWebRequestTracer()
 
     def end(self, send_end_event: bool = True, timestamp: Optional[datetime] = None):
         self.logger.debug("end()")
@@ -111,7 +124,7 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
         # TODO -  sessionWatchdog.removeFromSplitByTimeout(this);
 
     def _close(self):
-        raise NotImplementedError
+        self.end()
 
     def _on_child_closed(self, child: OpenKitObject):
         with self.lock:

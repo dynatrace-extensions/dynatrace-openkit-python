@@ -147,12 +147,8 @@ class BeaconSenderThread(Thread):
     def run(self):
         self.logger.debug("BeaconSenderThread - Running")
         while not self.context.terminal:
-            try:
-                self.context.execute_current_state()
-                if self.shutdown_flag.is_set():
-                    break
-            except KeyboardInterrupt:
-                self.logger.debug("BeaconSenderThread - KeyboardInterrupt")
+            self.context.execute_current_state()
+            if self.shutdown_flag.is_set():
                 break
 
         self.logger.debug("BeaconSenderThread - Exiting")

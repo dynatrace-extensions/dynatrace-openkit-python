@@ -22,6 +22,7 @@ class WebRequestTracerImpl(WebRequestTracer, CancelableOpenKitObject):
         self.url = url
         self.beacon = beacon
         self.parent_action_id = parent._action_id
+        self.parent_action_id = parent._action_id
         self.start_seq_no = self.beacon.next_sequence_number
         self.tag = self.beacon.create_tag(self.parent_action_id, self.start_seq_no)
         if timestamp is None:
@@ -52,7 +53,7 @@ class WebRequestTracerImpl(WebRequestTracer, CancelableOpenKitObject):
                 self.bytes_received = bytes_received
         return self
 
-    def start(self, timestamp: Optional[int] = None) -> "WebRequestTracer":
+    def start(self, timestamp: Optional[datetime] = None) -> "WebRequestTracer":
         self.logger.debug(f"start()")
         with self.lock:
             if not self.is_stopped:
@@ -63,7 +64,7 @@ class WebRequestTracerImpl(WebRequestTracer, CancelableOpenKitObject):
 
     def stop(self,
              response_code: int,
-             timestamp: Optional[int] = None,
+             timestamp: Optional[datetime] = None,
              discard_data: bool = False) -> "WebRequestTracer":
         self.logger.debug(f"stop({response_code})")
         with self.lock:

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 from typing import Optional
 
 
@@ -17,9 +18,9 @@ class WebRequestTracer(ABC):
         pass
 
     @abstractmethod
-    def start(self, timestamp: Optional[int] = None) -> "WebRequestTracer":
+    def start(self, timestamp: Optional[datetime] = None) -> "WebRequestTracer":
         pass
 
     @abstractmethod
-    def stop(self, response_code: int, timestamp: Optional[int] = None) -> "WebRequestTracer":
+    def stop(self, response_code: int, timestamp: Optional[datetime] = None) -> "WebRequestTracer":
         pass
