@@ -78,8 +78,6 @@ class Beacon:
     TAG_PREFIX = "MT"
     BEACON_DATA_DELIMITER = "&"
 
-    next_session_id = 0
-
     def __init__(
             self,
             beacon_initializer: "SessionCreator",
@@ -88,6 +86,8 @@ class Beacon:
             session_start_time = None,
     ):
         self.logger = beacon_initializer.logger
+        self.session_number = beacon_initializer.session_id_provider.next_session_id
+        self.session_sequence_number = beacon_initializer.session_sequence_number
         self.beacon_cache: BeaconCache = beacon_initializer.beacon_cache
         self.session_sequence_number = beacon_initializer.session_sequence_number
         self.beacon_key = BeaconKey(self.session_number, self.session_sequence_number)
@@ -126,11 +126,6 @@ class Beacon:
         with self._lock:
             self._next_sequence_number += 1
             return self._next_sequence_number
-
-    @property
-    def session_number(self) -> int:
-        self.next_session_id += 1
-        return self.next_session_id
 
     def create_immutable_beacon_data(self) -> str:
         openkit_config = self.configuration.openkit_config

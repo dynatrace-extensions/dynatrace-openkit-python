@@ -86,7 +86,13 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
         return NullRootAction()
 
     def identify_user(self, name: str, timestamp: Optional[datetime] = None) -> None:
-        raise NotImplementedError
+        self.logger.debug(f"identify_user({name}, {timestamp})")
+        with self.lock:
+            if not self.finished:
+                session = self.get_or_split_current_session_by_events()
+                self.record_top_level_event_interaction()
+                session.identify_user(name, timestamp)
+                self.last_user_tag = name
 
     def report_crash(self, error_name, reason: str, stacktrace: str, timestamp: Optional[datetime] = None) -> None:
         raise NotImplementedError
