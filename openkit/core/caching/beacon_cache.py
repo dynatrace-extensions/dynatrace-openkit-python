@@ -54,7 +54,7 @@ class BeaconCacheEntry:
         if not self.has_data_to_send():
             return ""
 
-        beacon_builder = "".join([str(max_size), chunk_prefix])
+        beacon_builder = chunk_prefix
         beacon_builder += self.chunkify_data_list(beacon_builder, self.events_being_sent, max_size, delimiter)
         beacon_builder += self.chunkify_data_list(beacon_builder, self.actions_being_sent, max_size, delimiter)
 
@@ -132,7 +132,7 @@ class BeaconCache:
 
     def add_action(self, beacon_key: BeaconKey, timestamp: datetime, data: str):
         self.logger.debug(
-            f"add_action(sn={beacon_key.beacon_id}, seq={beacon_key.beacon_seq_number}, timestamp={datetime}, data={data})"
+            f"add_action(sn={beacon_key.beacon_id}, seq={beacon_key.beacon_seq_number}, timestamp={timestamp}, data='{data}')"
         )
         with self._lock:
             key = hash(beacon_key)
@@ -151,7 +151,7 @@ class BeaconCache:
 
     def add_event(self, beacon_key: BeaconKey, timestamp: datetime, data: str):
         self.logger.debug(
-            f"add_event(sn={beacon_key.beacon_id}, seq={beacon_key.beacon_seq_number}, timestamp={datetime}, data={data})"
+            f"add_event(sn={beacon_key.beacon_id}, seq={beacon_key.beacon_seq_number}, timestamp={timestamp}, data='{data}')"
         )
         with self._lock:
             key = hash(beacon_key)

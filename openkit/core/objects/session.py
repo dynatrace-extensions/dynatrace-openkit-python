@@ -41,7 +41,7 @@ class SessionImpl(Session, OpenKitComposite):
         return NullRootAction()
 
     def identify_user(self, name: str, timestamp: Optional[datetime] = None) -> None:
-        self.logger.debug(f"identify_user({name})")
+        self.logger.debug(f"identify_user({name}, {timestamp})")
         if not self.state.is_finishing_or_finished:
             self.beacon.identify_user(name, timestamp)
 

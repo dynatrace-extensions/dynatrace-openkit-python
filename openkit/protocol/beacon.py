@@ -273,7 +273,6 @@ class Beacon:
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_START_SEQUENCE_NUMBER, self.next_sequence_number),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0, self.time_since_session_started(timestamp)),
         ]
-
         self.add_event_data(timestamp, "".join(string_parts))
 
     def report_error(self,
@@ -353,7 +352,8 @@ class Beacon:
         return int(datetime.now().timestamp() * 1000)
 
     def time_since_session_started(self, timestamp: datetime):
-        return int((timestamp - self.session_start_time).total_seconds() * 1000)
+        difference = int((timestamp - self.session_start_time).total_seconds() * 1000)
+        return difference
 
     def update_server_configuration(self, server_configuration):
         self.logger.debug(f"Received new server configuration: {server_configuration}")
