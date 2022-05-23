@@ -25,12 +25,15 @@ def main():
     session = ok.create_session("192.168.15.1")
     session.identify_user("david")
 
-    # Trace a web request and a user action
-    session.trace_web_request("https://www.google.com")
-    session.enter_action("test_action")
+    # Start an action
+    action = session.enter_action("test_action")
+
+    # Start and end a web request
+    web_request = action.trace_web_request("https://www.google.com")
+    time.sleep(1)
+    web_request.stop(200)
 
     # End the session
-    time.sleep(1)
     session.end()
 
     time.sleep(5)
