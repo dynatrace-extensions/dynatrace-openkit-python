@@ -59,7 +59,7 @@ class BeaconSendingContext:
         sessions = self.sessions.copy()
         for session in sessions:
             session.clear_captured_data()
-            if session.finished:
+            if session.state.is_finished:
                 self.sessions.remove(session)
 
     def execute_current_state(self):
@@ -136,6 +136,9 @@ class BeaconSendingContext:
                 sessions.append(session)
         return sessions
 
+    def remove_session(self, finished_session):
+        return self.sessions.remove(finished_session)
+
 
 class BeaconSenderThread(Thread):
     def __init__(self, logger: logging.Logger, context: BeaconSendingContext):
@@ -148,8 +151,6 @@ class BeaconSenderThread(Thread):
         self.logger.debug("BeaconSenderThread - Running")
         while not self.context.terminal:
             self.context.execute_current_state()
-            if self.shutdown_flag.is_set():
-                break
 
         self.logger.debug("BeaconSenderThread - Exiting")
 
@@ -169,6 +170,7 @@ class BeaconSender:
         self.thread.start()
 
     def shutdown(self):
+        self.context.shutdown_requested = True
         if self.thread is not None:
             self.thread.shutdown_flag.set()
 

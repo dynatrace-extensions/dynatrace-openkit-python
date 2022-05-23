@@ -1,9 +1,6 @@
 from typing import TYPE_CHECKING
 
-from .beacon_abstract import AbstractBeaconSendingState
-from .beacon_capture_off import BeaconSendingCaptureOffState
-from .beacon_capture_on import BeaconSendingCaptureOnState
-from .beacon_terminal import BeaconSendingTerminalState
+import openkit.core.communication as comm
 from .state_utils import send_status_request
 from ...protocol.status_response import StatusResponse
 
@@ -11,7 +8,7 @@ if TYPE_CHECKING:
     from ...core.beacon_sender import BeaconSendingContext
 
 
-class BeaconSendingInitState(AbstractBeaconSendingState):
+class BeaconSendingInitState(comm.AbstractBeaconSendingState):
     STATUS_CHECK_INTERVAL = 2 * 60 * 60 * 1000
     MAX_INITIAL_STATUS_REQUEST_RETRIES = 5
     INITIAL_RETRY_SLEEP_TIME_MILLISECONDS = 1000
@@ -35,7 +32,7 @@ class BeaconSendingInitState(AbstractBeaconSendingState):
             context.init_completed(False)
         elif r.status_code <= 400:
             context.handle_response(StatusResponse(r))
-            context.next_state = BeaconSendingCaptureOnState() if context.capture_on else BeaconSendingCaptureOffState()
+            context.next_state = comm.BeaconSendingCaptureOnState() if context.capture_on else comm.BeaconSendingCaptureOffState()
             context.init_completed(True)
 
     def execute_status_request(self, context: "BeaconSendingContext"):
@@ -64,7 +61,7 @@ class BeaconSendingInitState(AbstractBeaconSendingState):
         return r
 
     def get_shutdown_state(self):
-        return BeaconSendingTerminalState()
+        return comm.BeaconSendingTerminalState()
 
     def __repr__(self):
-        return "BeaconSendingInitState"
+        return "Init"

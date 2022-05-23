@@ -468,3 +468,5 @@ class Beacon:
         return server_config.data_sending_allowed and self.traffic_control_value < server_config.traffic_control_percentage
 
     # TODO - BizEvent
+    def enable_capture(self):
+        self.configuration.enable_capture()

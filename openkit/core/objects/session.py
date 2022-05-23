@@ -129,6 +129,9 @@ class SessionImpl(Session, OpenKitComposite):
     def send_beacon(self, http_client, context):
         return self.beacon.send(http_client, context)
 
+    def enable_capture(self):
+        self.beacon.enable_capture()
+
 
 class SessionState:
 

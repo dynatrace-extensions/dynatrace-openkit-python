@@ -1,8 +1,7 @@
 from typing import TYPE_CHECKING
 
-from .beacon_abstract import AbstractBeaconSendingState
-from .beacon_capture_off import BeaconSendingCaptureOffState
-from .beacon_flush import BeaconSendingFlushSessionsState
+import openkit.core.communication as comm
+from . import AbstractBeaconSendingState
 from ..configuration.server_configuration import ServerConfiguration
 from ...protocol.status_response import StatusResponse
 from ...vendor.mureq.mureq import Response
@@ -21,24 +20,24 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
 
         new_sessions_response = self.send_new_session_requests(context)
         if new_sessions_response is not None and new_sessions_response.status_code == 429:
-            context.next_state = BeaconSendingCaptureOffState()
+            context.next_state = comm.BeaconSendingCaptureOffState()
             return
 
         finished_sessions_response = self.send_finished_sessions(context)
         if finished_sessions_response is not None and finished_sessions_response.status_code == 429:
-            context.next_state = BeaconSendingCaptureOffState()
+            context.next_state = comm.BeaconSendingCaptureOffState()
             return
 
         open_sessions_response = self.send_open_sessions(context)
         if finished_sessions_response is not None and finished_sessions_response.status_code == 429:
-            context.next_state = BeaconSendingCaptureOffState()
+            context.next_state = comm.BeaconSendingCaptureOffState()
             return
 
         last_status_response = new_sessions_response or open_sessions_response or finished_sessions_response
         self.handle_status_response(context, last_status_response)
 
     def get_shutdown_state(self):
-        return BeaconSendingFlushSessionsState()
+        return comm.BeaconSendingFlushSessionsState()
 
     def send_new_session_requests(self, context: "BeaconSendingContext"):
 
@@ -69,7 +68,7 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
 
             context.sessions.remove(session)
             session.clear_captured_data()
-            session._close()
+            session.end()
         return response
 
     def send_open_sessions(self, context: "BeaconSendingContext"):
@@ -102,4 +101,7 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
         context.handle_response(status_response)
 
         if not context.capture_on:
-            context.next_state = BeaconSendingCaptureOffState()
+            context.next_state = comm.BeaconSendingCaptureOffState()
+
+    def __repr__(self):
+        return "Capture ON"

@@ -1,10 +1,10 @@
 from typing import TYPE_CHECKING
 
-from ...vendor.mureq.mureq import Response
-from ...protocol.status_response import StatusResponse
-from .beacon_abstract import AbstractBeaconSendingState
-from .beacon_flush import BeaconSendingFlushSessionsState
+import openkit.core.communication as comm
+from . import AbstractBeaconSendingState
 from ..communication.state_utils import send_status_request
+from ...protocol.status_response import StatusResponse
+from ...vendor.mureq.mureq import Response
 
 if TYPE_CHECKING:
     from ..beacon_sender import BeaconSendingContext
@@ -15,7 +15,7 @@ class BeaconSendingCaptureOffState(AbstractBeaconSendingState):
     STATUS_REQUEST_RETRIES = 5
     INITIAL_RETRY_SLEEP_TIME_MILLISECONDS = 1000
 
-    def __init__(self, sleep_time=None):
+    def __init__(self, sleep_time = None):
         super().__init__()
         if sleep_time is None:
             sleep_time = self.STATUS_CHECK_INTERVAL
@@ -28,7 +28,8 @@ class BeaconSendingCaptureOffState(AbstractBeaconSendingState):
 
         current_time = context.current_timestamp()
 
-        delta = self.sleep_time if self.sleep_time > 0 else self.STATUS_CHECK_INTERVAL - (current_time - context.last_status_check_time)
+        delta = self.sleep_time if self.sleep_time > 0 else self.STATUS_CHECK_INTERVAL - (
+                current_time - context.last_status_check_time)
         if delta > 0 and not context.shutdown_requested:
             context.sleep(delta)
 
@@ -37,7 +38,7 @@ class BeaconSendingCaptureOffState(AbstractBeaconSendingState):
         context.last_status_check_time = current_time
 
     def get_shutdown_state(self):
-        return BeaconSendingFlushSessionsState()
+        return comm.BeaconSendingFlushSessionsState()
 
     def handle_status_response(self, context: "BeaconSendingContext", response: Response):
         if response is not None:
@@ -47,4 +48,7 @@ class BeaconSendingCaptureOffState(AbstractBeaconSendingState):
             if response.status_code >= 400:
                 context.next_state = BeaconSendingCaptureOffState(10 * 60 * 1000)
             elif response.status_code < 400 and context.capture_on:
-                context.next_state = BeaconSendingCaptureOnState()
+                context.next_state = comm.BeaconSendingCaptureOnState()
+
+    def __repr__(self):
+        return "Capture OFF"
