@@ -27,7 +27,7 @@ class SessionWatchdogContext:
             time.sleep(sleep_time.total_seconds())
         except KeyboardInterrupt:
             self.request_shutdown()
-            
+
     def split_timed_out_sessions(self) -> timedelta:
         sleep_time: timedelta = self.DEFAULT_SLEEP_TIME
         sessions_to_split = self.sessions_to_split_by_timeout.copy()
@@ -88,7 +88,8 @@ class SessionWatchdogContext:
 
     def dequeue_from_closing(self, session: "SessionImpl"):
         with self.lock:
-            self.sessions_to_close.remove(session)
+            if session in self.sessions_to_close:
+                self.sessions_to_close.remove(session)
 
     def add_to_split_by_timeout(self, session: "SessionProxy"):
         if session.finished:
@@ -98,7 +99,8 @@ class SessionWatchdogContext:
 
     def remove_from_split_by_timeout(self, session: "SessionProxy"):
         with self.lock:
-            self.sessions_to_split_by_timeout.remove(session)
+            if session in self.sessions_to_split_by_timeout:
+                self.sessions_to_split_by_timeout.remove(session)
 
 
 class SessionWatchdogThread(Thread):
