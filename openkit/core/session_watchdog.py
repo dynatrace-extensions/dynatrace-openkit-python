@@ -105,7 +105,7 @@ class SessionWatchdogContext:
 
 class SessionWatchdogThread(Thread):
     def __init__(self, logger: logging.Logger, context: SessionWatchdogContext):
-        Thread.__init__(self, name="SessionWatchdogThread")
+        Thread.__init__(self, name="SessionWatchdogThread", daemon=True)
         self.logger = logger
         self.shutdown_flag = Event()
         self.context = context
@@ -115,7 +115,7 @@ class SessionWatchdogThread(Thread):
         while not self.context.shutdown_requested():
             self.context.execute()
 
-        self.logger.debug("SessionWatchdogThread - Exiting")
+        self.logger.info("SessionWatchdogThread - Exiting")
 
     def interrupt(self):
         self.shutdown_flag.set()
@@ -131,7 +131,6 @@ class SessionWatchdog:
 
     def initialize(self):
         self.thread = SessionWatchdogThread(self.logger, self.context)
-        self.thread.daemon = True
         self.thread.start()
 
     def shutdown(self):
@@ -142,7 +141,6 @@ class SessionWatchdog:
             return
 
         self.thread.interrupt()
-        self.thread.join(timeout=self.SHUTDOWN_TIMEOUT.total_seconds())
         self.thread = None
 
     def close_or_enqueue_for_closing(self, session: "SessionImpl", close_period: timedelta):

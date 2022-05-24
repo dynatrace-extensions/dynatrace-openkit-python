@@ -144,7 +144,7 @@ class BeaconSendingContext:
 
 class BeaconSenderThread(Thread):
     def __init__(self, logger: logging.Logger, context: BeaconSendingContext):
-        Thread.__init__(self, name="BeaconSenderThread")
+        Thread.__init__(self, name="BeaconSenderThread", daemon=True)
         self.logger = logger
         self.shutdown_flag = Event()
         self.context = context
@@ -169,7 +169,6 @@ class BeaconSender:
 
     def initialize(self):
         self.thread = BeaconSenderThread(self.logger, self.context)
-        self.thread.daemon = True
         self.thread.start()
 
     def shutdown(self):

@@ -23,7 +23,7 @@ class BeaconCacheEvictor(Thread):
         self.record_added = False
         self._lock = Condition()
         self.shutdown_flag = Event()
-        super().__init__(name="BeaconCacheEvictor")
+        super().__init__(name="BeaconCacheEvictor", daemon=True)
 
     def run(self) -> None:
         self.beacon_cache.add_observer(self)
