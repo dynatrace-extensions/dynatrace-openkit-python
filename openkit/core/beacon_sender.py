@@ -1,14 +1,16 @@
 import logging
 import time
 from threading import Event, RLock, Thread
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from .communication import AbstractBeaconSendingState, BeaconSendingInitState
 from .communication.countdown_latch import CountDownLatch
 from .configuration.server_configuration import ServerConfiguration
-from .objects.session import SessionImpl
 from ..protocol.http_client import HttpClient
 from ..protocol.status_response import StatusResponse
+
+if TYPE_CHECKING:
+    from .objects.session import SessionImpl
 
 
 class BeaconSendingContext:
@@ -115,14 +117,14 @@ class BeaconSendingContext:
         self.disable_capture()
         self.clear_all_session_data()
 
-    def get_all_not_configured_sessions(self) -> List[SessionImpl]:
+    def get_all_not_configured_sessions(self) -> List["SessionImpl"]:
         sessions = []
         for session in self.sessions:
             if not session.state.is_configured:
                 sessions.append(session)
         return sessions
 
-    def get_all_finished_and_configured_sessions(self) -> List[SessionImpl]:
+    def get_all_finished_and_configured_sessions(self) -> List["SessionImpl"]:
         sessions = []
         for session in self.sessions:
             if session.state.is_configured_and_finished:
@@ -167,6 +169,7 @@ class BeaconSender:
 
     def initialize(self):
         self.thread = BeaconSenderThread(self.logger, self.context)
+        self.thread.daemon = True
         self.thread.start()
 
     def shutdown(self):

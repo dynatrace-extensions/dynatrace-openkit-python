@@ -24,6 +24,7 @@ class SessionImpl(Session, OpenKitComposite):
         self.parent = parent
         self.beacon = beacon
 
+        self._split_by_events_grace_period_end_time: Optional[datetime] = None
         self.beacon.start_session()
 
     def enter_action(self, name: str, timestamp: Optional[datetime] = None) -> RootAction:
@@ -97,7 +98,6 @@ class SessionImpl(Session, OpenKitComposite):
         self.state.mark_was_tried_for_ending()
         return False
 
-    # TODO - try_end for watchdog
     # TODO - Send Biz event
     # TODO - Other beacon and config methods
 
@@ -131,6 +131,10 @@ class SessionImpl(Session, OpenKitComposite):
 
     def enable_capture(self):
         self.beacon.enable_capture()
+
+    @property
+    def split_by_events_grace_period_end_time(self) -> datetime:
+        return self._split_by_events_grace_period_end_time
 
 
 class SessionState:

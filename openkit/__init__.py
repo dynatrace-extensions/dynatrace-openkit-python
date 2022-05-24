@@ -1,6 +1,4 @@
-"""
-Python implementation of Dynatrace OpenKit
-"""
+"""Python implementation of Dynatrace OpenKit."""
 
 from .api.openkit import OpenKit
 

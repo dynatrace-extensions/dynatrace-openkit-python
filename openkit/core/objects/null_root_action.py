@@ -3,6 +3,7 @@ from typing import Optional, Union
 
 from .base_action import Action
 from .null_action import NullAction
+from .null_web_request_tracer import NullWebRequestTracer
 from .root_action import RootAction
 from .web_request_tracer import WebRequestTracer
 
@@ -29,8 +30,7 @@ class NullRootAction(RootAction):
         return self
 
     def trace_web_request(self, url: str, timestamp: Optional[datetime] = None) -> WebRequestTracer:
-        # TODO - Return NullWebRequestTracer
-        pass
+        return NullWebRequestTracer()
 
     def leave_action(self, timestamp: Optional[datetime] = None) -> Optional["Action"]:
         return None

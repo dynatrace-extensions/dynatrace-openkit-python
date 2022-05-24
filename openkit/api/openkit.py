@@ -19,6 +19,7 @@ from ..core.configuration.privacy_configuration import DataCollectionLevel, Priv
 from ..core.objects.null_session import NullSession
 from ..core.objects.session_creator import SessionCreator
 from ..core.objects.session_proxy import SessionProxy
+from ..core.session_watchdog import SessionWatchdog, SessionWatchdogContext
 from ..protocol.http_client import DEFAULT_SERVER_ID, HttpClient
 from ..providers.session_id import SessionIDProvider
 
@@ -80,15 +81,19 @@ class OpenKit(OpenKitObject, OpenKitComposite):
         self._beacon_sender = BeaconSender(self._logger, self._http_client)
 
         # Session Watchdog
-        # TODO: Implement Session Watchdog
+        self._session_watchdog = SessionWatchdog(self._logger, SessionWatchdogContext())
 
         self._lock = RLock()
         self._openkit_configuration = OpenkitConfiguration(self)
 
         # Call shutdown on exit signals
         signal.signal(signal.SIGINT, self._signal_handler)
+        self.initialize()
+
+    def initialize(self):
         self._beacon_cache_evictor.start()
         self._beacon_sender.initialize()
+        self._session_watchdog.initialize()
 
     def _signal_handler(self, signal_number: int, frame):
         self.shutdown()
@@ -117,6 +122,7 @@ class OpenKit(OpenKitObject, OpenKitComposite):
                                              self,
                                              session_creator,
                                              self._beacon_sender,
+                                             self._session_watchdog,
                                              device_id,
                                              timestamp)
                 self._store_child_in_list(session_proxy)
@@ -135,7 +141,7 @@ class OpenKit(OpenKitObject, OpenKitComposite):
         for child in children:
             child._close()
 
-        # TODO - stop watchdog
+        self._session_watchdog.shutdown()
         self._beacon_cache_evictor.stop()
         self._beacon_sender.shutdown()
 

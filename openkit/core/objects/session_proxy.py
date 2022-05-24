@@ -1,7 +1,7 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from threading import RLock
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from .null_root_action import NullRootAction
 from .null_web_request_tracer import NullWebRequestTracer
@@ -16,6 +16,9 @@ from ...api.root_action import RootAction
 from ...api.session import Session
 from ...api.web_request_tracer import WebRequestTracer
 
+if TYPE_CHECKING:
+    from ..session_watchdog import SessionWatchdog
+
 
 class SessionProxy(ServerConfigurationUpdateCallback, Session):
 
@@ -24,15 +27,17 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
                  parent: OpenKitComposite,
                  session_creator: SessionCreator,
                  beacon_sender: BeaconSender,
+                 session_watchdog: "SessionWatchdog",
                  device_id: Optional[int] = None,
                  timestamp: Optional[datetime] = None):
         super().__init__()
 
-        self.current_session = None
+        self.current_session: Optional[SessionImpl] = None
         self.logger = logger
         self.parent = parent
         self.session_creator = session_creator
         self.beacon_sender = beacon_sender
+        self.session_watchdog = session_watchdog
         self.device_id = device_id
         self.timestamp = timestamp
 
@@ -121,7 +126,7 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
 
         self.close_child_objects(timestamp)
         self.parent._on_child_closed(self)
-        # TODO -  sessionWatchdog.removeFromSplitByTimeout(this);
+        self.session_watchdog.remove_from_split_by_timeout(self)
 
     def _close(self):
         self.end()
@@ -130,8 +135,7 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
         with self.lock:
             self._remove_child_from_list(child)
             if isinstance(child, SessionImpl):
-                pass
-                # TODO - sessionWatchdog.dequeueFromClosing((SessionImpl) childObject);
+                self.session_watchdog.dequeue_from_closing(child)
 
     def record_top_level_event_interaction(self):
         self.last_interaction_time = datetime.now()
@@ -165,7 +169,7 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
         else:
             close_grace_period = self.server_config.send_interval_in_milliseconds
 
-        # TODO sessionWatchdog.closeOrEnqueueForClosing(currentSession, closeGracePeriodInMillis);
+        self.session_watchdog.close_or_enqueue_for_closing(self.current_session, close_grace_period)
 
     def create_split_session_and_make_current(self):
         self.create_and_assign_current_session(None, self.server_config)
@@ -178,3 +182,47 @@ class SessionProxy(ServerConfigurationUpdateCallback, Session):
                 child.end(child == self.current_session, timestamp)
             else:
                 child._close()
+
+    def split_session_by_time(self) -> datetime:
+        with self.lock:
+            if self.finished:
+                return datetime(1970, 1, 1)
+
+        next_split_time = self.calculate_next_split_time()
+        now = datetime.now()
+        if next_split_time > now:
+            return next_split_time
+
+        self.split_and_create_initial_session()
+        return self.calculate_next_split_time()
+
+    def calculate_next_split_time(self) -> datetime:
+        if self.server_config is None:
+            return datetime(1970, 1, 1)
+
+        split_by_idle_timeout = self.server_config.session_split_by_idle_timeout_enabled
+        split_by_session_duration = self.server_config.session_split_by_session_duration_enabled
+
+        idle_timeout = self.last_interaction_time + timedelta(milliseconds=self.server_config.session_timeout_in_milliseconds)
+        session_max_time = self.current_session.beacon.session_start_time + timedelta(milliseconds=self.server_config.max_session_duration_in_milliseconds)
+
+        self.logger.debug(f"calculate_next_split_time: idle_timeout={idle_timeout}, session_max_time={session_max_time}")
+
+        if split_by_idle_timeout and split_by_session_duration:
+            return min(idle_timeout, session_max_time)
+        elif split_by_idle_timeout:
+            return idle_timeout
+        elif split_by_session_duration:
+            return session_max_time
+
+        return datetime(1970, 1, 1)
+
+    def split_and_create_initial_session(self):
+        self.close_or_enqueue_current_session_for_closing()
+
+        self.session_creator.reset()
+        self.create_initial_session_and_make_current(self.server_config)
+        self.retag_current_session()
+
+    def create_initial_session_and_make_current(self, server_config):
+        self.create_and_assign_current_session(server_config, None)
