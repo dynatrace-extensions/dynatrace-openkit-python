@@ -38,7 +38,8 @@ class OpenKit(OpenKitObject, OpenKitComposite):
                  beacon_cache_lower_memory: Optional[int] = DEFAULT_LOWER_MEMORY_BOUNDARY_IN_BYTES,
                  beacon_cache_upper_memory: Optional[int] = DEFAULT_UPPER_MEMORY_BOUNDARY_IN_BYTES,
                  application_name: Optional[str] = "",
-                 privacy_config: Optional[PrivacyConfiguration] = None):
+                 privacy_config: Optional[PrivacyConfiguration] = None,
+                 verify_certificates: bool = True):
         super().__init__()
         self._endpoint = endpoint
         self._application_id = application_id
@@ -75,7 +76,7 @@ class OpenKit(OpenKitObject, OpenKitComposite):
                                                         beacon_cache_upper_memory)
 
         # HTTP Client
-        self._http_client = HttpClient(self._logger, endpoint, DEFAULT_SERVER_ID, application_id)
+        self._http_client = HttpClient(self._logger, endpoint, DEFAULT_SERVER_ID, application_id, verify_certificates)
 
         # Beacon Sender
         self._beacon_sender = BeaconSender(self._logger, self._http_client)
@@ -99,7 +100,7 @@ class OpenKit(OpenKitObject, OpenKitComposite):
         self.shutdown()
 
     def wait_for_init_completion(self, timeout_ms: Optional[int] = None) -> bool:
-        raise NotImplementedError("Wait for init completion is not implemented")
+        return self._beacon_sender.wait_for_init_completion(timeout_ms)
 
     def initialized(self) -> bool:
         raise NotImplementedError("Initialized is not implemented")

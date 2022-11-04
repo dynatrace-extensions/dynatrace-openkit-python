@@ -32,11 +32,17 @@ class RequestType(Enum):
 
 
 class HttpClient:
-    def __init__(self, logger: logging.Logger, base_url: str, server_id: int, application_id: str):
+    def __init__(self,
+                 logger: logging.Logger,
+                 base_url: str,
+                 server_id: int,
+                 application_id: str,
+                 verify_certificates: bool):
         self.logger = logger
         self.server_id = server_id
         self.monitor_url = self.build_monitor_url(base_url, application_id, server_id)
         self.new_session_url = self.build_session_url()
+        self.verify_certificates = verify_certificates
 
     def send_request(self,
                      request_type: RequestType,
@@ -49,7 +55,7 @@ class HttpClient:
         headers = {}
         if client_ip_address is not None:
             headers = {"X-Client-IP": client_ip_address}
-        r = requests.request(method, url, body=data, headers=headers)
+        r = requests.request(method, url, body=data, headers=headers, verify=self.verify_certificates)
         if data:
             self.logger.debug(f"Beacon data: {data}")
         self.logger.debug(f"Response for {request_type} ({url}): {r.status_code}: {r.content}")

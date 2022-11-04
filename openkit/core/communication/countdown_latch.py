@@ -13,8 +13,8 @@ class CountDownLatch(object):
             self.lock.notify_all()
         self.lock.release()
 
-    def wait(self):
+    def wait(self, timeout_ms):
         self.lock.acquire()
         while self.count > 0:
-            self.lock.wait()
+            self.lock.wait(timeout_ms / 1000.0)
         self.lock.release()

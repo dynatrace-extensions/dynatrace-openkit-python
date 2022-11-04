@@ -141,6 +141,9 @@ class BeaconSendingContext:
     def remove_session(self, finished_session):
         return self.sessions.remove(finished_session)
 
+    def wait_for_init_completion(self, timeout_ms):
+        self.countdown_latch.wait(timeout_ms)
+
 
 class BeaconSenderThread(Thread):
     def __init__(self, logger: logging.Logger, context: BeaconSendingContext):
@@ -183,3 +186,7 @@ class BeaconSender:
     @property
     def last_server_configuration(self):
         return self.context.last_server_configuration
+
+    def wait_for_init_completion(self, timeout_ms):
+        self.initialize()
+        self.context.wait_for_init_completion(timeout_ms)
