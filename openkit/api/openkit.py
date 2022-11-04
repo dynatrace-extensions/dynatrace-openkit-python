@@ -89,9 +89,9 @@ class OpenKit(OpenKitObject, OpenKitComposite):
 
         # Call shutdown on exit signals
         signal.signal(signal.SIGINT, self._signal_handler)
-        self.initialize()
+        self._initialize()
 
-    def initialize(self):
+    def _initialize(self):
         self._beacon_cache_evictor.start()
         self._beacon_sender.initialize()
         self._session_watchdog.initialize()
@@ -100,11 +100,10 @@ class OpenKit(OpenKitObject, OpenKitComposite):
         self.shutdown()
 
     def wait_for_init_completion(self, timeout_ms: Optional[int] = None) -> bool:
-        self.initialize()
         return self._beacon_sender.wait_for_init_completion(timeout_ms)
 
     def initialized(self) -> bool:
-        raise NotImplementedError("Initialized is not implemented")
+        return self._beacon_sender.initialized()
 
     def create_session(self,
                        ip_address: Optional[str] = None,

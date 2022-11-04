@@ -189,3 +189,6 @@ class BeaconSender:
 
     def wait_for_init_completion(self, timeout_ms):
         self.context.wait_for_init_completion(timeout_ms)
+
+    def initialized(self):
+        return self.context.init_succeeded
