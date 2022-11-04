@@ -188,5 +188,4 @@ class BeaconSender:
         return self.context.last_server_configuration
 
     def wait_for_init_completion(self, timeout_ms):
-        self.initialize()
         self.context.wait_for_init_completion(timeout_ms)

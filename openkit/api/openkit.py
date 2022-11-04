@@ -100,6 +100,7 @@ class OpenKit(OpenKitObject, OpenKitComposite):
         self.shutdown()
 
     def wait_for_init_completion(self, timeout_ms: Optional[int] = None) -> bool:
+        self.initialize()
         return self._beacon_sender.wait_for_init_completion(timeout_ms)
 
     def initialized(self) -> bool:
