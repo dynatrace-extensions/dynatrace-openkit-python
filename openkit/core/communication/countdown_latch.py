@@ -15,6 +15,7 @@ class CountDownLatch(object):
 
     def wait(self, timeout_ms):
         self.lock.acquire()
-        while self.count > 0:
-            self.lock.wait(timeout_ms / 1000.0)
+        self.lock.wait(timeout_ms / 1000.0)
+        if self.count > 0:
+            raise Exception("Timeout waiting for initialization")
         self.lock.release()
