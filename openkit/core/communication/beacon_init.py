@@ -47,6 +47,8 @@ class BeaconSendingInitState(comm.AbstractBeaconSendingState):
                                         self.INITIAL_RETRY_SLEEP_TIME_MILLISECONDS)
                 if context.shutdown_requested or r.is_ok_response():
                     break
+                else:
+                    context.logger.warning(f"Error while trying to initialize OpenKit: {r}")
 
                 sleep_time = self.REINIT_DELAY_MILLISECONDS[self.reinitialize_delay_index]
                 if r.is_too_many_requests():
