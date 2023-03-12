@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Optional
 from urllib.parse import quote
 
+from .status_response import StatusResponse
 from ..vendor.mureq import mureq as requests
 
 REQUEST_TYPE_MOBILE = "type=m"
@@ -49,7 +50,7 @@ class HttpClient:
                      url: str,
                      client_ip_address: Optional[str],
                      data: Optional[str],
-                     method: str):
+                     method: str) -> StatusResponse:
         self.logger.debug(f"Sending request type {request_type} ({url})")
 
         headers = {}
@@ -59,7 +60,7 @@ class HttpClient:
         if data:
             self.logger.debug(f"Beacon data: {data}")
         self.logger.debug(f"Response for {request_type} ({url}): {r.status_code}: {r.content}")
-        return r
+        return StatusResponse(r)
 
     def build_monitor_url(self, base_url, application_id, server_id) -> str:
         url_parts = [
@@ -87,7 +88,7 @@ class HttpClient:
         url = self.append_additional_query_parameters(self.new_session_url, additional_params)
         return self.send_request(RequestType.NEW_SESSION, url, None, None, "GET")
 
-    def send_beacon_request(self, client_ip: str, data: str, additional_params):
+    def send_beacon_request(self, client_ip: str, data: str, additional_params) -> StatusResponse:
         url = self.append_additional_query_parameters(self.monitor_url, additional_params)
         return self.send_request(RequestType.BEACON, url, client_ip, data, "POST")
 

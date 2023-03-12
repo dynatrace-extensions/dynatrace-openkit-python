@@ -77,7 +77,7 @@ class BeaconSendingContext:
 
     def handle_response(self, response: StatusResponse):
 
-        if response is None or response.http_response.status_code >= 400:
+        if response is None or response.is_error_response():
             self.disable_capture()
             self.clear_all_session_data()
             return

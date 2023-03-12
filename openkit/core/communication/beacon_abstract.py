@@ -1,6 +1,6 @@
+import traceback
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
-import traceback
 
 if TYPE_CHECKING:
     from ..beacon_sender import BeaconSendingContext

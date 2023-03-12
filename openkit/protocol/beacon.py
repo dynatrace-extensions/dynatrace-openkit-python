@@ -13,6 +13,7 @@ from ..protocol.http_client import (AGENT_TECHNOLOGY_TYPE,
                                     OPENKIT_VERSION,
                                     PLATFORM_TYPE_OPENKIT,
                                     PROTOCOL_VERSION)
+from ..protocol.status_response import StatusResponse
 
 if TYPE_CHECKING:
     from ..core.configuration.beacon_configuration import BeaconConfiguration
@@ -362,7 +363,9 @@ class Beacon:
         self.configuration.server_configuration = server_configuration
         self.configuration.server_configured = True
 
-    def send(self, http_client: "HttpClient", additional_params):
+    def send(self, http_client: "HttpClient", additional_params) -> StatusResponse:
+
+        response: Optional[StatusResponse] = None
 
         self.beacon_cache.prepare_data_for_sending(self.beacon_key)
         while self.beacon_cache.has_data_for_sending(self.beacon_key):
@@ -382,21 +385,21 @@ class Beacon:
             )
 
             if not chunk:
-                return
+                return response
 
             # ugly hack
             chunk = chunk.lstrip("&")
-            
+
             encoded_chunk = b""
             try:
                 encoded_chunk = chunk.encode("UTF-8")
             except Exception as e:
                 self.logger.error(f"Could not decode beacon chunk: {e}")
                 self.beacon_cache.reset_chunked_data(self.beacon_key)
-                return
+                return response
 
             response = http_client.send_beacon_request(self.ip_address, encoded_chunk, additional_params)
-            if response is None or response.status_code > 400:
+            if response is None or response.is_error_response():
                 self.beacon_cache.reset_chunked_data(self.beacon_key)
                 break
             else:

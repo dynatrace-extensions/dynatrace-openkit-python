@@ -4,7 +4,6 @@ import openkit.core.communication as comm
 from . import AbstractBeaconSendingState
 from ..communication.state_utils import send_status_request
 from ...protocol.status_response import StatusResponse
-from ...vendor.mureq.mureq import Response
 
 if TYPE_CHECKING:
     from ..beacon_sender import BeaconSendingContext
@@ -40,14 +39,13 @@ class BeaconSendingCaptureOffState(AbstractBeaconSendingState):
     def get_shutdown_state(self):
         return comm.BeaconSendingFlushSessionsState()
 
-    def handle_status_response(self, context: "BeaconSendingContext", response: Response):
+    def handle_status_response(self, context: "BeaconSendingContext", response: StatusResponse):
         if response is not None:
-            status_response = StatusResponse(response)
-            context.handle_response(status_response)
+            context.handle_response(response)
 
-            if response.status_code >= 400:
+            if response.is_error_response():
                 context.next_state = BeaconSendingCaptureOffState(10 * 60 * 1000)
-            elif response.status_code < 400 and context.capture_on:
+            elif response.is_ok_response() and context.capture_on:
                 context.next_state = comm.BeaconSendingCaptureOnState()
 
     def __repr__(self):

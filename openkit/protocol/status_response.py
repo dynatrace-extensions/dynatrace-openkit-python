@@ -1,5 +1,4 @@
-from typing import TYPE_CHECKING, Optional
-
+from typing import Optional, TYPE_CHECKING
 
 RESPONSE_KEY_AGENT_CONFIG = "mobileAgentConfig"
 RESPONSE_KEY_MAX_BEACON_SIZE_IN_KB = "maxBeaconSizeKb"
@@ -81,3 +80,12 @@ class StatusResponse:
                 self.server_id = json_response.get(RESPONSE_KEY_SERVER_ID, self.server_id)
 
             self.timestamp = int(json_response.get(RESPONSE_KEY_TIMESTAMP_IN_MILLIS, self.timestamp))
+
+    def is_error_response(self) -> bool:
+        return self.http_response is None or self.http_response.status_code >= 400
+
+    def is_ok_response(self) -> bool:
+        return self.http_response is not None and self.http_response.status_code < 400
+
+    def is_too_many_requests(self) -> bool:
+        return self.http_response is not None and self.http_response.status_code == 429

@@ -4,7 +4,6 @@ import openkit.core.communication as comm
 from . import AbstractBeaconSendingState
 from ..configuration.server_configuration import ServerConfiguration
 from ...protocol.status_response import StatusResponse
-from ...vendor.mureq.mureq import Response
 
 if TYPE_CHECKING:
     from ..beacon_sender import BeaconSendingContext
@@ -19,17 +18,17 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
         context.sleep(1000)
 
         new_sessions_response = self.send_new_session_requests(context)
-        if new_sessions_response is not None and new_sessions_response.status_code == 429:
+        if new_sessions_response is not None and new_sessions_response.is_too_many_requests():
             context.next_state = comm.BeaconSendingCaptureOffState()
             return
 
         finished_sessions_response = self.send_finished_sessions(context)
-        if finished_sessions_response is not None and finished_sessions_response.status_code == 429:
+        if finished_sessions_response is not None and finished_sessions_response.is_too_many_requests():
             context.next_state = comm.BeaconSendingCaptureOffState()
             return
 
         open_sessions_response = self.send_open_sessions(context)
-        if finished_sessions_response is not None and finished_sessions_response.status_code == 429:
+        if finished_sessions_response is not None and finished_sessions_response.is_too_many_requests():
             context.next_state = comm.BeaconSendingCaptureOffState()
             return
 
@@ -39,7 +38,7 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
     def get_shutdown_state(self):
         return comm.BeaconSendingFlushSessionsState()
 
-    def send_new_session_requests(self, context: "BeaconSendingContext"):
+    def send_new_session_requests(self, context: "BeaconSendingContext") -> StatusResponse:
 
         response = None
         not_configured_sessions = context.get_all_not_configured_sessions()
@@ -47,14 +46,13 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
         for session in not_configured_sessions:
             response = context.http_client.send_new_session_request(context)
 
-            if response.status_code < 400:
-                status_response = StatusResponse(response)
-                updated_attributes = context.update_from(status_response)
+            if response.is_ok_response():
+                updated_attributes = context.update_from(response)
                 new_server_config = ServerConfiguration.create_from(updated_attributes)
                 session.update_server_configuration(new_server_config)
         return response
 
-    def send_finished_sessions(self, context: "BeaconSendingContext"):
+    def send_finished_sessions(self, context: "BeaconSendingContext") -> StatusResponse:
 
         response = None
         finished_sessions = context.get_all_finished_and_configured_sessions()
@@ -69,14 +67,14 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
             session.end()
         return response
 
-    def send_open_sessions(self, context: "BeaconSendingContext"):
+    def send_open_sessions(self, context: "BeaconSendingContext") -> StatusResponse | None:
         response = None
 
         current_time = context.current_timestamp()
 
         send_open_sessions = current_time > context.last_open_session_beacon_send_time + context.send_interval
         if not send_open_sessions:
-            return
+            return response
 
         open_sessions = context.get_all_open_and_configured_sessions()
 
@@ -89,12 +87,11 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
         context.last_open_session_beacon_send_time = current_time
         return response
 
-    def handle_status_response(self, context: "BeaconSendingContext", response: Response):
+    def handle_status_response(self, context: "BeaconSendingContext", response: StatusResponse):
 
         if response is None:
             return
-        status_response = StatusResponse(response)
-        context.handle_response(status_response)
+        context.handle_response(response)
 
         if not context.capture_on:
             context.next_state = comm.BeaconSendingCaptureOffState()

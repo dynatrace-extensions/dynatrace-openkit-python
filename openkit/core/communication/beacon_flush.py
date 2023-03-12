@@ -29,7 +29,7 @@ class BeaconSendingFlushSessionsState(comm.AbstractBeaconSendingState):
         for finished_session in finished_sessions:
             if not too_many_requests and finished_session.data_sending_allowed:
                 response = finished_session.send_beacon(context.http_client, context)
-                if response.status_code == 429:
+                if response.is_too_many_requests():
                     too_many_requests = True
 
             finished_session.clear_captured_data()

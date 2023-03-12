@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING
 
 import openkit.core.communication as comm
 from .state_utils import send_status_request
-from ...protocol.status_response import StatusResponse
 
 if TYPE_CHECKING:
     from ...core.beacon_sender import BeaconSendingContext
@@ -30,35 +29,38 @@ class BeaconSendingInitState(comm.AbstractBeaconSendingState):
 
         if context.shutdown_requested:
             context.init_completed(False)
-        elif r.status_code <= 400:
-            context.handle_response(StatusResponse(r))
+        elif r.is_ok_response():
+            context.handle_response(r)
             context.next_state = comm.BeaconSendingCaptureOnState() if context.capture_on else comm.BeaconSendingCaptureOffState()
             context.init_completed(True)
 
     def execute_status_request(self, context: "BeaconSendingContext"):
+        try:
 
-        while True:
-            current_timestamp = context.current_timestamp()
-            context.last_open_session_beacon_send_time = current_timestamp
-            context.last_status_check_time = current_timestamp
+            while True:
+                current_timestamp = context.current_timestamp()
+                context.last_open_session_beacon_send_time = current_timestamp
+                context.last_status_check_time = current_timestamp
 
-            r = send_status_request(context,
-                                    self.MAX_INITIAL_STATUS_REQUEST_RETRIES,
-                                    self.INITIAL_RETRY_SLEEP_TIME_MILLISECONDS)
-            if context.shutdown_requested or r.status_code <= 400:
-                break
+                r = send_status_request(context,
+                                        self.MAX_INITIAL_STATUS_REQUEST_RETRIES,
+                                        self.INITIAL_RETRY_SLEEP_TIME_MILLISECONDS)
+                if context.shutdown_requested or r.is_ok_response():
+                    break
 
-            sleep_time = self.REINIT_DELAY_MILLISECONDS[self.reinitialize_delay_index]
-            if r.status_code == 429:
-                if "retry-after" in r.headers:
-                    sleep_time = int(r.headers.get("retry-after")) * 1000
-                    context.disable_capture_and_clear()
+                sleep_time = self.REINIT_DELAY_MILLISECONDS[self.reinitialize_delay_index]
+                if r.is_too_many_requests():
+                    if "retry-after" in r.headers:
+                        sleep_time = int(r.headers.get("retry-after")) * 1000
+                        context.disable_capture_and_clear()
 
-            context.sleep(sleep_time)
-            self.reinitialize_delay_index = min(self.reinitialize_delay_index + 1,
-                                                len(self.REINIT_DELAY_MILLISECONDS) - 1)
+                context.sleep(sleep_time)
+                self.reinitialize_delay_index = min(self.reinitialize_delay_index + 1,
+                                                    len(self.REINIT_DELAY_MILLISECONDS) - 1)
 
-        return r
+            return r
+        except Exception as e:
+            context.logger.error(f"Error while trying to initialize OpenKit: {e}")
 
     def get_shutdown_state(self):
         return comm.BeaconSendingTerminalState()

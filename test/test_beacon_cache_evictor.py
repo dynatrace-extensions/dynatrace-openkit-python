@@ -2,8 +2,9 @@ import unittest
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock
 
-from openkit.core.caching.beacon_cache import BeaconCache, BeaconCacheEvictor
+from openkit.core.caching.beacon_cache import BeaconCache
 from openkit.core.caching.beacon_key import BeaconKey
+from openkit.core.caching.evictor import BeaconCacheEvictor
 
 
 class TestBeaconCacheEvictor(unittest.TestCase):
