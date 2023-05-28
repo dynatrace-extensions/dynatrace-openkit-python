@@ -15,7 +15,10 @@ class OpenKitComposite:
         self._children.append(child)
 
     def _remove_child_from_list(self, child: OpenKitObject):
-        self._children.remove(child)
+        try:
+            self._children.remove(child)
+        except ValueError:
+            pass
 
     def _copy_children(self) -> List[OpenKitObject]:
         return self._children.copy()
