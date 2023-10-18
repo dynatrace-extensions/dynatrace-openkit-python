@@ -1,5 +1,6 @@
 import logging
 import signal
+from datetime import datetime
 from threading import RLock
 from typing import List, Optional
 
@@ -109,7 +110,7 @@ class OpenKit(OpenKitObject, OpenKitComposite):
 
     def create_session(self,
                        ip_address: Optional[str] = None,
-                       timestamp: Optional[int] = None,
+                       timestamp: Optional[datetime] = None,
                        device_id: Optional[int] = None) -> Session:
         self._logger.debug(f"create_session({ip_address}, {timestamp})")
         with self._lock:
