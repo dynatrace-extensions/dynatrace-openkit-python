@@ -8,8 +8,7 @@ from urllib.parse import quote_plus
 from ..core.caching.beacon_key import BeaconKey
 from ..core.configuration.server_configuration import ServerConfigurationUpdateCallback
 from ..protocol.event_type import EventType
-from ..protocol.http_client import (AGENT_TECHNOLOGY_TYPE,
-                                    ERROR_TECHNOLOGY_TYPE,
+from ..protocol.http_client import (ERROR_TECHNOLOGY_TYPE,
                                     OPENKIT_VERSION,
                                     PLATFORM_TYPE_OPENKIT,
                                     PROTOCOL_VERSION)
@@ -139,7 +138,7 @@ class Beacon:
             self.add_key_value_pair(self.BEACON_KEY_APPLICATION_NAME, openkit_config.application_name),
             self.add_key_value_pair(self.BEACON_KEY_APPLICATION_VERSION, openkit_config.application_version),
             self.add_key_value_pair(self.BEACON_KEY_PLATFORM_TYPE, PLATFORM_TYPE_OPENKIT),
-            self.add_key_value_pair(self.BEACON_KEY_AGENT_TECHNOLOGY_TYPE, AGENT_TECHNOLOGY_TYPE),
+            self.add_key_value_pair(self.BEACON_KEY_AGENT_TECHNOLOGY_TYPE, self.configuration.openkit_config.technology_type),
 
             # device/visitor ID, session number and IP address
             self.add_key_value_pair(self.BEACON_KEY_VISITOR_ID, self.device_id),

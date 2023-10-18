@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ... import Openkit
+    from ...api.openkit import OpenKit
 
 
 class OpenkitConfiguration:
-    def __init__(self, openkit: "Openkit"):
+    def __init__(self, openkit: "OpenKit"):
         self.endpoint_url = openkit._endpoint
         self.deviceID = openkit._device_id
         self.openkit_type = "DynatraceOpenKit"
@@ -16,3 +16,4 @@ class OpenkitConfiguration:
         self.manufacturer = openkit._manufacturer
         self.model_id = "OpenKitDevice"
         self.default_server_id = 1
+        self.technology_type = openkit._technology_type

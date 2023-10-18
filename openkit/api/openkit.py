@@ -20,7 +20,7 @@ from ..core.objects.null_session import NullSession
 from ..core.objects.session_creator import SessionCreator
 from ..core.objects.session_proxy import SessionProxy
 from ..core.session_watchdog import SessionWatchdog, SessionWatchdogContext
-from ..protocol.http_client import DEFAULT_SERVER_ID, HttpClient
+from ..protocol.http_client import AGENT_TECHNOLOGY_TYPE, DEFAULT_SERVER_ID, HttpClient
 from ..providers.session_id import SessionIDProvider
 
 
@@ -39,7 +39,8 @@ class OpenKit(OpenKitObject, OpenKitComposite):
                  beacon_cache_upper_memory: Optional[int] = DEFAULT_UPPER_MEMORY_BOUNDARY_IN_BYTES,
                  application_name: Optional[str] = "",
                  privacy_config: Optional[PrivacyConfiguration] = None,
-                 verify_certificates: bool = True):
+                 verify_certificates: bool = True,
+                 technology_type: Optional[str] = AGENT_TECHNOLOGY_TYPE):
         super().__init__()
         self._endpoint = endpoint
         self._application_id = application_id
@@ -48,6 +49,7 @@ class OpenKit(OpenKitObject, OpenKitComposite):
         self._manufacturer = manufacturer
         self._version = version
         self._application_name = application_name
+        self._technology_type = technology_type
 
         if privacy_config is None:
             privacy_config = PrivacyConfiguration(DataCollectionLevel.USER_BEHAVIOR, CrashReportingLevel.OPT_IN_CRASHES)

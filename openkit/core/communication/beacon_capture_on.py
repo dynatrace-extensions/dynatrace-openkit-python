@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Union
 
 import openkit.core.communication as comm
 from . import AbstractBeaconSendingState
@@ -67,7 +67,7 @@ class BeaconSendingCaptureOnState(AbstractBeaconSendingState):
             session.end()
         return response
 
-    def send_open_sessions(self, context: "BeaconSendingContext") -> StatusResponse | None:
+    def send_open_sessions(self, context: "BeaconSendingContext") -> Union[StatusResponse, None]:
         response = None
 
         current_time = context.current_timestamp()
