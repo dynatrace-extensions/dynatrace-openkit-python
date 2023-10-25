@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from ..protocol.http_client import HttpClient
     from ..core.objects.session_creator import SessionCreator
 
+MAX_NAME_LEN = 250
 
 class Beacon:
     # basic data constants
@@ -74,7 +75,6 @@ class Beacon:
 
     CHARSET = "UTF-8"
 
-    MAX_NAME_LEN = 250
     TAG_PREFIX = "MT"
     BEACON_DATA_DELIMITER = "&"
 
@@ -242,6 +242,9 @@ class Beacon:
         event_time, event_string = self.build_event(event_type, value_name, parent_action_id)
         if timestamp is not None:
             event_time = timestamp
+
+        if event_type == EventType.VALUE_STRING:
+            value = truncate(value)
         string_parts = [event_string, Beacon.add_key_value_pair(Beacon.BEACON_KEY_VALUE, value)]
 
         self.add_event_data(event_time, "".join(string_parts))
@@ -429,12 +432,16 @@ class Beacon:
 
         return "".join(string_parts)
 
+
+
     @staticmethod
     def build_basic_event_data(event_type: EventType, name: Optional[str]):
+        name = name.strip() if name is not None else ""
+        name = truncate(name)
 
         string_parts = [
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_EVENT_TYPE, str(event_type.value)),
-            Beacon.add_key_value_pair(Beacon.BEACON_KEY_NAME, name.strip()) if name is not None else "",
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_NAME, name),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_THREAD_ID, str(get_ident() & 0xFFFFFFFF)),
         ]
 
@@ -479,3 +486,8 @@ class Beacon:
     # TODO - BizEvent
     def enable_capture(self):
         self.configuration.enable_capture()
+
+
+def truncate(name: str):
+    if name:
+        return f"{name}"[:MAX_NAME_LEN]
