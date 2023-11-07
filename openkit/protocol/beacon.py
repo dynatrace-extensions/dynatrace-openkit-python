@@ -184,7 +184,7 @@ class Beacon:
             f"-{self.session_sequence_number}" if self.configuration.server_configuration.visit_store_version > 1 else "",
             f"_{quote(self.configuration.openkit_config.application_id)}",
             f"_{parent_action_id}",
-            f"_{get_ident() & 0xffffffff}",  # 32 bits
+            f"_{get_ident() & 0xfffffff}",  # 32 bits
             f"_{tracer_seq_no}",
         ]
 
@@ -442,7 +442,7 @@ class Beacon:
         string_parts = [
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_EVENT_TYPE, str(event_type.value)),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_NAME, name),
-            Beacon.add_key_value_pair(Beacon.BEACON_KEY_THREAD_ID, str(get_ident() & 0xFFFFFFFF)),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_THREAD_ID, str(get_ident() & 0xFFFFFFF)),
         ]
 
         return "".join(string_parts)
