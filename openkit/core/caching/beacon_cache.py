@@ -60,11 +60,12 @@ class BeaconCacheEntry:
     def chunkify_data_list(data_being_sent: List[BeaconCacheRecord], max_size, delimiter):
         data = ""
         for record in data_being_sent:
-            record.marked_for_sending = True
-            if record.data.startswith(delimiter):
-                data += record.data
-            else:
-                data += f"{delimiter}{record.data}"
+            if len(data) <= max_size:
+                record.marked_for_sending = True
+                if record.data.startswith(delimiter):
+                    data += record.data
+                else:
+                    data += f"{delimiter}{record.data}"
 
         return data
 
