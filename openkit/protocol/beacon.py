@@ -451,7 +451,8 @@ class Beacon:
     def add_key_value_pair(key: str, value: Union[str, int, float]):
         if value != 0 and not value:
             return ""
-        string_parts = [Beacon.append_key(key), str(value)]
+        encoded_value = quote(f"{value}")
+        string_parts = [Beacon.append_key(key), encoded_value]
         return "".join(string_parts)
 
     @staticmethod
