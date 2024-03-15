@@ -239,9 +239,7 @@ class Beacon:
         }
         event_type = type_to_event_type[type(value)]
 
-        event_time, event_string = self.build_event(event_type, value_name, parent_action_id)
-        if timestamp is not None:
-            event_time = timestamp
+        event_time, event_string = self.build_event(event_type, value_name, parent_action_id, timestamp)
 
         if event_type == EventType.VALUE_STRING:
             value = truncate(value)
