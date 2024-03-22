@@ -219,9 +219,12 @@ class BeaconCache:
     def delete_cache_entry(self, key):
         key = hash(key)
         self.logger.debug(f"Deleting cache entry {key}")
+
+        entry = None
         with self._lock:
-            entry = self.beacons.get(key)
-            del self.beacons[key]
+            if key in self.beacons:
+                entry = self.beacons.get(key)
+                del self.beacons[key]
 
         if entry is not None:
             self.cache_size += -1 * entry.total_bytes
