@@ -24,8 +24,6 @@ class WebRequestTracerImpl(WebRequestTracer, CancelableOpenKitObject):
         self.parent_action_id = parent.id
         self.start_seq_no = self.beacon.next_sequence_number
         self.tag = self.beacon.create_tag(self.parent_action_id, self.start_seq_no)
-        if timestamp is None:
-            timestamp = datetime.now()
         self.start_time = timestamp
         self.end_time: Optional[datetime] = None
 
@@ -53,27 +51,31 @@ class WebRequestTracerImpl(WebRequestTracer, CancelableOpenKitObject):
         return self
 
     def start(self, timestamp: Optional[datetime] = None) -> "WebRequestTracer":
-        self.logger.debug(f"start()")
+
         with self.lock:
             if not self.is_stopped:
-                if timestamp is None:
+                if timestamp is None and not self.start_time:
                     timestamp = datetime.now()
                 self.start_time = timestamp
+        self.logger.debug(f"WebRequestTracer.start {self}")
         return self
 
     def stop(self,
              response_code: int,
              timestamp: Optional[datetime] = None,
              discard_data: bool = False) -> "WebRequestTracer":
-        self.logger.debug(f"stop({response_code})")
+
         with self.lock:
             if self.is_stopped:
                 return self
-        self.response_code = response_code
-        self.end_seq_no = self.beacon.next_sequence_number
+
         if timestamp is None:
             timestamp = datetime.now()
         self.end_time = timestamp
+        self.logger.debug(f"WebRequestTracer.stop {response_code} {timestamp} {self}")
+
+        self.response_code = response_code
+        self.end_seq_no = self.beacon.next_sequence_number
 
         if not discard_data:
             self.beacon.add_web_request(self.parent_action_id, self)
@@ -92,4 +94,4 @@ class WebRequestTracerImpl(WebRequestTracer, CancelableOpenKitObject):
         return self.end_time is not None
 
     def __repr__(self):
-        return f"WebRequestTracer [sn='{self.beacon.session_number}', id='{self.parent_action_id}', url='{self.url}']"
+        return f"WebRequestTracer [sn='{self.beacon.session_number}', id='{self.parent_action_id}', url='{self.url} start='{self.start_time} end='{self.end_time}']"

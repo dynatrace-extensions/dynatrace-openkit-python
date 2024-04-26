@@ -328,6 +328,8 @@ class Beacon:
             self.beacon_cache.add_action(self.beacon_key, timestamp, string)
 
     def add_web_request(self, parent_action_id: int, web_request_tracer):
+
+        duration = int((web_request_tracer.end_time - web_request_tracer.start_time).total_seconds() * 1000)
         string_parts = [
             Beacon.build_basic_event_data(EventType.WEB_REQUEST, quote_plus(web_request_tracer.url)),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_PARENT_ACTION_ID, parent_action_id),
@@ -335,8 +337,7 @@ class Beacon:
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0,
                                       self.time_since_session_started(web_request_tracer.start_time)),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_END_SEQUENCE_NUMBER, web_request_tracer.end_seq_no),
-            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_1,
-                                      self.time_since_session_started(web_request_tracer.end_time)),
+            Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_1, duration),
         ]
         if hasattr(web_request_tracer, "response_code"):
             string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_RESPONSECODE,
