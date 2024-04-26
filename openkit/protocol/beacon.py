@@ -349,7 +349,7 @@ class Beacon:
             string_parts.append(Beacon.add_key_value_pair(Beacon.BEACON_KEY_WEBREQUEST_BYTES_SENT,
                                                           web_request_tracer.bytes_sent))
 
-        self.add_event_data(self.session_start_time, "".join(string_parts))
+        self.add_event_data(web_request_tracer.start_time, "".join(string_parts))
 
     @property
     def current_timestamp(self) -> int:
