@@ -331,7 +331,7 @@ class Beacon:
 
         duration = int((web_request_tracer.end_time - web_request_tracer.start_time).total_seconds() * 1000)
         string_parts = [
-            Beacon.build_basic_event_data(EventType.WEB_REQUEST, quote_plus(web_request_tracer.url)),
+            Beacon.build_basic_event_data(EventType.WEB_REQUEST, web_request_tracer.url),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_PARENT_ACTION_ID, parent_action_id),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_START_SEQUENCE_NUMBER, web_request_tracer.start_seq_no),
             Beacon.add_key_value_pair(Beacon.BEACON_KEY_TIME_0,
