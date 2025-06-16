@@ -10,7 +10,7 @@ from .web_request_tracer import WebRequestTracer
 
 class NullRootAction(RootAction):
 
-    def enter_action(self, name: str):
+    def enter_action(self, name: str, timestamp: Optional[datetime] = None):
         return NullAction(self)
 
     def report_event(self, event_name: str, timestamp: Optional[datetime] = None) -> "Action":
