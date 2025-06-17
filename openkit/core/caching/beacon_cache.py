@@ -250,3 +250,7 @@ class BeaconCache:
             entry = self.beacons.get(key)
 
         return entry.has_data_to_send()
+
+    def get_beacons(self) -> Dict[int, BeaconCacheEntry]:
+        with self._lock:
+            return self.beacons
