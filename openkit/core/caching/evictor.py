@@ -60,7 +60,11 @@ class BeaconCacheEvictor(Thread):
 
                 actions_deleted = 0
                 events_deleted = 0
-                for key, entry in self.beacon_cache.get_beacons().items():
+                beacons = self.beacon_cache.get_beacons()
+                for key in list(beacons.keys()):
+                    entry = beacons.get(key)
+                    if entry is None:
+                        continue
                     with entry.lock:
                         old_len_actions = len(entry.actions)
                         old_len_events = len(entry.events)
@@ -84,8 +88,12 @@ class BeaconCacheEvictor(Thread):
                 )
 
                 while self.beacon_cache.cache_size > self.beacon_cache_lower_memory and self.beacon_cache.beacons:
-
-                    for key, entry in self.beacon_cache.beacons.items():
+                    
+                    beacons = self.beacon_cache.beacons
+                    for key in list(beacons.keys()):
+                        entry = beacons.get(key)
+                        if entry is None:
+                            continue
                         with entry.lock:
                             # If there are no actions, remove the oldest event
                             if entry.events and not entry.actions:
