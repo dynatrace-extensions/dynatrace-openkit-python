@@ -140,43 +140,98 @@ class BeaconCache:
                 self.cache_size += entry.total_bytes
 
     def add_action(self, beacon_key: BeaconKey, timestamp: datetime, data: str):
-        self.logger.debug(
-            f"add_action(sn={beacon_key.beacon_id}, seq={beacon_key.beacon_seq_number}, timestamp={timestamp}, data='{data}')"
-        )
-        with self._lock:
-            key = hash(beacon_key)
-            entry = self.beacons.get(key, BeaconCacheEntry())
+        # Only log if debug level is enabled (avoid expensive f-string)
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(
+                f"add_action(sn={beacon_key.beacon_id}, seq={beacon_key.beacon_seq_number}, timestamp={timestamp}, data='{data}')"
+            )
+        
+        # Pre-compute values before acquiring locks
+        key = hash(beacon_key)
+        record = BeaconCacheRecord(timestamp, data)
+        record_size = record.size()
+        
+        # Try to acquire main cache lock with 1 second timeout
+        if not self._lock.acquire(timeout=1.0):
+            self.logger.warning(
+                f"add_action: Failed to acquire cache lock within 1 second for beacon {beacon_key.beacon_id}. Action dropped."
+            )
+            return
+        
+        try:
+            entry = self.beacons.get(key)
+            if entry is None:
+                entry = BeaconCacheEntry()
+                self.beacons[key] = entry
 
-            record = BeaconCacheRecord(timestamp, data)
-
-            with entry.lock:
+            # Try to acquire entry lock with 1 second timeout
+            if not entry.lock.acquire(timeout=1.0):
+                self.logger.warning(
+                    f"add_action: Failed to acquire entry lock within 1 second for beacon {beacon_key.beacon_id}. Action dropped."
+                )
+                return
+            
+            try:
                 entry.actions.append(record)
-                entry.total_bytes += record.size()
+                entry.total_bytes += record_size
+            finally:
+                entry.lock.release()
 
-            self.beacons[key] = entry
-            self.cache_size += record.size()
+            self.cache_size += record_size
+            
+        finally:
+            self._lock.release()
 
         self.on_date_added()
 
     def add_event(self, beacon_key: BeaconKey, timestamp: datetime, data: str):
-        self.logger.debug(
-            f"add_event(sn={beacon_key.beacon_id}, seq={beacon_key.beacon_seq_number}, timestamp={timestamp}, data='{data}')"
-        )
-        with self._lock:
-            key = hash(beacon_key)
-            entry = self.beacons.get(key, BeaconCacheEntry())
+        # Only log if debug level is enabled (avoid expensive f-string)
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(
+                f"add_event(sn={beacon_key.beacon_id}, seq={beacon_key.beacon_seq_number}, timestamp={timestamp}, data='{data}')"
+            )
+        
+        # Pre-compute values before acquiring locks
+        key = hash(beacon_key)
+        
+        # Try to acquire main cache lock with 1 second timeout
+        if not self._lock.acquire(timeout=1.0):
+            self.logger.warning(
+                f"add_event: Failed to acquire cache lock within 1 second for beacon {beacon_key.beacon_id}. Event dropped."
+            )
+            return
+        
+        try:
+            entry = self.beacons.get(key)
+            if entry is None:
+                entry = BeaconCacheEntry()
+                self.beacons[key] = entry
 
+            # Strip "&" prefix if entry has existing data (do this before creating record)
             if entry.events or entry.actions:
-                data = data.lstrip("&")
+                if data.startswith("&"):
+                    data = data[1:]
 
             record = BeaconCacheRecord(timestamp, data)
+            record_size = record.size()
 
-            with entry.lock:
+            # Try to acquire entry lock with 1 second timeout
+            if not entry.lock.acquire(timeout=1.0):
+                self.logger.warning(
+                    f"add_event: Failed to acquire entry lock within 1 second for beacon {beacon_key.beacon_id}. Event dropped."
+                )
+                return
+            
+            try:
                 entry.events.append(record)
-                entry.total_bytes += record.size()
+                entry.total_bytes += record_size
+            finally:
+                entry.lock.release()
 
-            self.beacons[key] = entry
-            self.cache_size += record.size()
+            self.cache_size += record_size
+            
+        finally:
+            self._lock.release()
 
         self.on_date_added()
 
@@ -253,4 +308,4 @@ class BeaconCache:
 
     def get_beacons(self) -> Dict[int, BeaconCacheEntry]:
         with self._lock:
-            return self.beacons
+            return self.beacons.copy()
