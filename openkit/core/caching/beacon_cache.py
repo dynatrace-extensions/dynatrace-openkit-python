@@ -7,6 +7,7 @@ from typing import Dict, List
 
 from .beacon_key import BeaconKey
 
+LOCK_ACQUIRE_TIMEOUT = 3.0  # seconds
 
 @functools.total_ordering
 class BeaconCacheRecord:
@@ -151,10 +152,10 @@ class BeaconCache:
         record = BeaconCacheRecord(timestamp, data)
         record_size = record.size()
         
-        # Try to acquire main cache lock with 1 second timeout
-        if not self._lock.acquire(timeout=1.0):
+        # Try to acquire main cache lock with a timeout
+        if not self._lock.acquire(timeout=LOCK_ACQUIRE_TIMEOUT):
             self.logger.warning(
-                f"add_action: Failed to acquire cache lock within 1 second for beacon {beacon_key.beacon_id}. Action dropped."
+                f"add_action: Failed to acquire cache lock within {LOCK_ACQUIRE_TIMEOUT} seconds for beacon {beacon_key.beacon_id}. Action dropped."
             )
             return
         
@@ -164,10 +165,10 @@ class BeaconCache:
                 entry = BeaconCacheEntry()
                 self.beacons[key] = entry
 
-            # Try to acquire entry lock with 1 second timeout
-            if not entry.lock.acquire(timeout=1.0):
+            # Try to acquire entry lock with a timeout
+            if not entry.lock.acquire(timeout=LOCK_ACQUIRE_TIMEOUT):
                 self.logger.warning(
-                    f"add_action: Failed to acquire entry lock within 1 second for beacon {beacon_key.beacon_id}. Action dropped."
+                    f"add_action: Failed to acquire entry lock within {LOCK_ACQUIRE_TIMEOUT} seconds for beacon {beacon_key.beacon_id}. Action dropped."
                 )
                 return
             
