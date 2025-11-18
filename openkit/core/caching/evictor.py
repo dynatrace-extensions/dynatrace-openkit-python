@@ -87,7 +87,7 @@ class BeaconCacheEvictor(Thread):
             self.logger.debug(f"Deleted {actions_deleted} actions and {events_deleted} events from the cache")
             self.beacon_cache.update_size()
         except Exception as e:
-            self.logger.error(f"Error during time eviction: {e}")
+            self.logger.error(f"DEC:1A8 Error during time eviction: {e}")
 
     def space_eviction(self):
         try:
@@ -133,4 +133,4 @@ class BeaconCacheEvictor(Thread):
 
             self.logger.debug(f"The cache is {self.beacon_cache.cache_size / 1024 / 1024:.2f} MB after the cleanup")
         except Exception as e:
-            self.logger.error(f"Error during space eviction: {e}")
+            self.logger.error(f"DEC:1A8 Error during space eviction: {e}")
