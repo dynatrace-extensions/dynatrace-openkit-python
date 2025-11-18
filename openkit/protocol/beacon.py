@@ -395,7 +395,7 @@ class Beacon:
             try:
                 encoded_chunk = chunk.encode("UTF-8")
             except Exception as e:
-                self.logger.error(f"Could not decode beacon chunk: {e}")
+                self.logger.error(f"DEC:1AA Could not decode beacon chunk: {e}")
                 self.beacon_cache.reset_chunked_data(self.beacon_key)
                 return response
 

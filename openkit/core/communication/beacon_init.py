@@ -60,7 +60,7 @@ class BeaconSendingInitState(comm.AbstractBeaconSendingState):
 
             return r
         except Exception as e:
-            context.logger.error(f"Error while trying to initialize OpenKit: {e}")
+            context.logger.error(f"DEC:1A9 Error while trying to initialize OpenKit: {e}")
 
     def get_shutdown_state(self):
         return comm.BeaconSendingTerminalState()
